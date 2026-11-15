@@ -104,12 +104,21 @@ export function verifyTx(
       continue;
     }
     const msg = sighashAllMessage(tx, uniq);
-    const check = verifySighashAll(msg, bytesToHex(sig), lock.args);
-    results.push(
-      check.ok
-        ? { ...base, verdict: "verified" }
-        : { ...base, verdict: "bad-signature", reason: `recovered ${check.recovered}` },
-    );
+    try {
+      const check = verifySighashAll(msg, bytesToHex(sig), lock.args);
+      results.push(
+        check.ok
+          ? { ...base, verdict: "verified" }
+          : { ...base, verdict: "bad-signature", reason: `recovered ${check.recovered}` },
+      );
+    } catch (e) {
+      // Malformed / non-recoverable signature: a verdict, never an exception.
+      results.push({
+        ...base,
+        verdict: "bad-signature",
+        reason: `invalid signature: ${(e as Error).message}`,
+      });
+    }
   }
   return results;
 }

@@ -12,7 +12,7 @@ package is the oracle.
 ```bash
 npm install
 npm run typecheck
-npm test                 # offline fixture verification (no network)
+npm test                 # hostile corpus (18 tests) + offline fixture verification
 npm run selftest         # live: 25 mainnet txs, hash + signature
 npm run redteam          # the input-claim attack demo
 npx tsx src/cli.ts inspect <txhash>
@@ -39,11 +39,15 @@ src/
     inspect.ts    fee, deltas, change candidates, warnings - from bound data only
     proofs.ts     resolve proofs from a node (dev convenience)
   cli.ts
+  fixtures.ts     fixture loading
+  profiles.ts     lock/type registry: names + verifiability
+  hostile.test.ts 18 acceptance tests for the strict trust model
   scripts/
     selftest.ts   live hash/signature check
     offline.ts    fixture check, no network
     redteam.ts    the attack demo
     collect.ts    fixture collector
+    identify-lock.ts  name an unknown code hash from its deployment cell
 fixtures/         mainnet transactions + input proofs + manifest
 ```
 

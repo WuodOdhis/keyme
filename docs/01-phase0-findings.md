@@ -117,7 +117,30 @@ failures              0
 Use `npx tsx src/scripts/identify-lock.ts <codeHash>` to repeat this for any future unknown lock: it
 finds a fixture that uses it and dumps readable strings from the deployment cell.
 
-## 6. What this changes in the spec
+## 6. Hostile corpus, executable
+
+`src/hostile.test.ts` runs under `npm test` (18 tests). It is the acceptance criteria for D1:
+
+| Case | Expected |
+|---|---|
+| inflated input capacity | bind rejects |
+| previous tx that does not hash to the outpoint | bind rejects |
+| index mismatch / swapped output / mutated data claim | bind rejects |
+| proof count mismatch | bind rejects |
+| changed output capacity | signature fails |
+| changed `cell_dep` | signature fails |
+| reordered inputs | nothing verifies |
+| perturbed signature bytes | signature fails |
+| malformed signature | verdict, never an exception |
+| Godwoken L2 lock | refused, named |
+| unknown code hash | refused |
+| known lock with no profile (OmniLock) | refused, named |
+
+One fix came out of this: `recoverPublicKey` throws on a non-canonical signature. That is now caught and
+reported as `bad-signature`, because a verifier that crashes on hostile input is itself a denial of
+service.
+
+## 7. What this changes in the spec
 
 - `input_proofs[].prev_tx` is mandatory (already reflected in §6.1).
 - PSCT partial signatures are keyed by **script group**, not by input.
@@ -125,12 +148,11 @@ finds a fixture that uses it and dumps readable strings from the deployment cell
   `sighash-all/secp256k1-blake160/v1`; multisig needs its own placeholder and ordering rules.
 - An empty witness is not "no witness": it is a 16-byte empty `WitnessArgs` for sighash-all.
 
-## 7. Next
+## 8. Next
 
-1. Identify the remaining lock kinds that matter for users (OmniLock, multisig deployments, JoyID,
-   NostrLock are named in the registry but have no profile).
+1. Profiles for the user-facing locks that still have none: OmniLock, the three multisig deployments,
+   JoyID, NostrLock. Multisig first — it is the actual treasury use case and it exercises the
+   placeholder/ordering rules.
 2. Collect labelled fixtures: DAO deposit, DAO withdraw (headers + `input_type`), xUDT transfer,
    Spore create/transfer, 2-of-3 multisig.
-3. Implement the hostile corpus as assertions, not demos (forged capacity, wrong prev-tx hash,
-   index mismatch, substituted `cell_dep`, mutated `outputs_data`, dark `since`).
-4. Then, and only then, write `spec/psct-v0.md` as a description of what the verifier enforces.
+3. Then write `spec/psct-v0.md` as a description of what the verifier enforces.
