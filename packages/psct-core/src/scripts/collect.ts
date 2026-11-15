@@ -1,0 +1,91 @@
+/**
+ * Collect offline fixtures: a real transaction plus its input proofs, as normalized JSON.
+ *
+ * Fixtures are the regression base for the spec. Everything a verifier needs must be here —
+ * no RPC at verify time.
+ *
+ * Run: npx tsx src/scripts/collect.ts [count]
+ */
+
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { MAINNET } from "../rpc.js";
+import type { RpcTransaction, Transaction } from "../ckb.js";
+import { resolveProofs } from "../psct/proofs.js";
+import { bindAll } from "../psct/bind.js";
+import { classifyLock } from "../profiles.js";
+import { txHash } from "../hash.js";
+import type { InputProof } from "../psct/bind.js";
+
+const OUT = join(process.cwd(), "fixtures");
+
+function ser(v: unknown): unknown {
+  if (typeof v === "bigint") return v.toString();
+  if (Array.isArray(v)) return v.map(ser);
+  if (v && typeof v === "object") {
+    return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, ser(x)]));
+  }
+  return v;
+}
+
+async function main() {
+  const want = Number(process.argv[2] ?? 6);
+  mkdirSync(OUT, { recursive: true });
+  const manifest: { hash: string; inputs: number; outputs: number; fee: string }[] = [];
+  const tip = Number(await MAINNET.tip());
+  const seen = new Set<string>();
+
+  for (let d = 1; d < 120 && manifest.length < want; d++) {
+    for (const { hash, tx } of await MAINNET.blockTxs(tip - d)) {
+      if (seen.has(hash)) continue;
+      if (tx.inputs.some((i) => /^0x0+$/.test(i.previousOutput.txHash))) continue;
+      if (tx.witnesses.length === 0) continue;
+
+      const computed = txHash(tx);
+      if (computed !== hash) {
+        console.warn(`skip ${hash}: tx_hash mismatch (${computed})`);
+        continue;
+      }
+
+      const proofs = await resolveProofs(tx, MAINNET);
+      let bound;
+      try {
+        bound = bindAll(tx, proofs);
+      } catch (e) {
+        console.warn(`skip ${hash}: ${(e as Error).message}`);
+        continue;
+      }
+
+      // Keep the corpus representative: L2/infrastructure and unknown locks are refusal cases,
+      // not payment fixtures. Collect them deliberately when testing refusal paths.
+      const kinds = bound.map((b) => classifyLock(b.cellOutput.lock));
+      const infra = kinds.find((k) => k.kind === "infrastructure");
+      const unknown = kinds.find((k) => k.kind === "unknown");
+      if (infra || unknown) {
+        console.warn(`skip ${hash}: ${(infra ?? unknown)!.name}`);
+        continue;
+      }
+      const fee = bound.reduce((n, b) => n + b.cellOutput.capacity, 0n) - tx.outputs.reduce((n, o) => n + o.capacity, 0n);
+
+      const fixture = {
+        hash,
+        tx: ser(tx),
+        proofs: proofs.map((p: InputProof) => ({ index: p.index, prevTx: ser(p.prevTx) })),
+      };
+      writeFileSync(join(OUT, `${hash}.json`), JSON.stringify(fixture, null, 2));
+      manifest.push({ hash, inputs: tx.inputs.length, outputs: tx.outputs.length, fee: fee.toString() });
+      seen.add(hash);
+      if (manifest.length >= want) break;
+    }
+  }
+
+  manifest.sort((a, b) => Number(BigInt(a.fee) - BigInt(b.fee)));
+  writeFileSync(join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2));
+  console.log(`wrote ${manifest.length} fixtures to ${OUT}`);
+  for (const m of manifest) console.log(`  ${m.hash} inputs=${m.inputs} fee=${m.fee}`);
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
