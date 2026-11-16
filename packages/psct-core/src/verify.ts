@@ -1,19 +1,12 @@
-/** Signature verification: recover pubkey, compare blake160 to lock args. */
+/** Signature verification: per lock group, one verdict each. Unknown locks are refused. */
 
-import { secp256k1 } from "@noble/curves/secp256k1";
-import { bytesToHex, concat, hexToBytes } from "./bytes.js";
+import { bytesToHex, hexToBytes } from "./bytes.js";
+import { recoverPubkey } from "./secp.js";
 import { blake160 } from "./hash.js";
 import { sighashAllMessage, witnessLock } from "./sighash.js";
-import { classifyLock } from "./profiles.js";
+import { classifyLock, MULTISIG_PROFILE, MULTISIG_V2_PROFILE, SECP_PROFILE } from "./profiles.js";
+import { verifyMultisigGroup } from "./multisig.js";
 import type { Script, Transaction } from "./ckb.js";
-
-export function recoverPubkey(message: Uint8Array, sig65: Uint8Array): Uint8Array {
-  if (sig65.length !== 65) throw new Error(`expected 65-byte signature, got ${sig65.length}`);
-  const compact = concat(sig65.slice(0, 32), sig65.slice(32, 64));
-  const recid = sig65[64]!;
-  const sig = secp256k1.Signature.fromCompact(compact).addRecoveryBit(recid);
-  return sig.recoverPublicKey(message).toRawBytes(true);
-}
 
 export interface SigCheck {
   ok: boolean;
@@ -48,12 +41,10 @@ export interface GroupResult {
   profile: string | null;
   verdict: GroupVerdict;
   reason?: string;
+  /** For multisig: signer pubkey hashes that were present. */
+  signers?: string[];
 }
 
-/**
- * Verify every lock group. Unknown locks are refused, never guessed.
- * A group is "ok" only when its signature was actually recovered and matched.
- */
 export function verifyTx(
   tx: Transaction,
   bound: { cellOutput: { lock: Script; type: Script | null } }[],
@@ -89,6 +80,22 @@ export function verifyTx(
       continue;
     }
 
+    if (p.profile === MULTISIG_PROFILE || p.profile === MULTISIG_V2_PROFILE) {
+      const r = verifyMultisigGroup(tx, uniq, lock.args);
+      results.push({
+        ...base,
+        verdict: r.ok ? "verified" : "bad-signature",
+        reason: r.reason,
+        signers: r.signers,
+      });
+      continue;
+    }
+
+    if (p.profile !== SECP_PROFILE) {
+      results.push({ ...base, verdict: "no-profile", reason: `unimplemented profile ${p.profile}` });
+      continue;
+    }
+
     const sig = witnessLock(tx.witnesses[first] ?? "0x");
     if (!sig || sig.length !== 65) {
       results.push({
@@ -98,16 +105,15 @@ export function verifyTx(
       });
       continue;
     }
-    const msg = sighashAllMessage(tx, uniq);
     try {
+      const msg = sighashAllMessage(tx, uniq);
       const check = verifySighashAll(msg, bytesToHex(sig), lock.args);
       results.push(
         check.ok
-          ? { ...base, verdict: "verified" }
+          ? { ...base, verdict: "verified", signers: [check.recovered] }
           : { ...base, verdict: "bad-signature", reason: `recovered ${check.recovered}` },
       );
     } catch (e) {
-      // Malformed / non-recoverable signature: a verdict, never an exception.
       results.push({
         ...base,
         verdict: "bad-signature",

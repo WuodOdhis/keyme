@@ -13,14 +13,28 @@ import assert from "node:assert/strict";
 import { bindAll, BindError } from "./psct/bind.js";
 import { inspect } from "./psct/inspect.js";
 import { verifyTx } from "./verify.js";
-import { witnessLock } from "./sighash.js";
+import { witnessLock, decodeWitnessArgs, encodeWitnessArgs } from "./sighash.js";
+import { decodeMultisigLock } from "./multisig.js";
 import { txHash } from "./hash.js";
 import { hexToBytes, bytesToHex } from "./bytes.js";
 import { loadFixture, loadManifest } from "./fixtures.js";
+import { SECP_PROFILE } from "./profiles.js";
 import type { CellOutput } from "./ckb.js";
 
 const manifest = loadManifest();
-const plain = loadFixture([...manifest].sort((a, b) => a.inputs - b.inputs)[0]!.hash);
+
+// Select by class, never by shape: a 2-input multisig fixture is not a "plain payment".
+const plain = (() => {
+  for (const e of [...manifest].sort((a, b) => a.inputs - b.inputs)) {
+    const f = loadFixture(e.hash);
+    const r = verifyTx(f.tx, bindAll(f.tx, f.proofs));
+    // Every group must be a verified single-key secp256k1 group — "contains one" is not enough.
+    if (r.length > 0 && r.every((x) => x.profile === SECP_PROFILE && x.verdict === "verified")) {
+      return f;
+    }
+  }
+  throw new Error("no plain secp256k1 fixture");
+})();
 
 // A multi-input fixture made only of supported user locks (no L2 witnesses).
 const multi = (() => {
@@ -160,6 +174,78 @@ describe("lock policy", () => {
     const r = verifyTx(plain.tx, bound)[0]!;
     assert.equal(r.verdict, "no-profile");
     assert.equal(r.name, "OmniLock");
+  });
+});
+
+describe("multisig", () => {
+  const ms = (() => {
+    for (const e of manifest) {
+      const f = loadFixture(e.hash);
+      const r = verifyTx(f.tx, bindAll(f.tx, f.proofs));
+      if (r.some((x) => x.profile?.includes("multisig") && x.verdict === "verified")) return f;
+    }
+    throw new Error("no verified multisig fixture");
+  })();
+
+  const msGroup = () => {
+    const results = verifyTx(ms.tx, bindAll(ms.tx, ms.proofs));
+    const g = results.find((r) => r.profile?.includes("multisig"));
+    assert.ok(g, "no multisig group");
+    return g!;
+  };
+
+  const replaceLock = (txIndex: number, lock: Uint8Array) => {
+    const args = decodeWitnessArgs(hexToBytes(ms.tx.witnesses[txIndex]!));
+    return bytesToHex(encodeWitnessArgs({ ...args, lock }));
+  };
+
+  it("verifies a real on-chain multisig spend", () => {
+    const g = msGroup();
+    assert.equal(g.verdict, "verified");
+    assert.ok((g.signers?.length ?? 0) >= 2);
+  });
+
+  it("is order-independent over signatures", () => {
+    const g = msGroup();
+    const i = g.inputs[0]!;
+    const lock = witnessLock(ms.tx.witnesses[i]!)!;
+    const parsed = decodeMultisigLock(lock)!;
+    assert.ok(parsed.signatures.length >= 2, "need two signatures to swap");
+
+    const scriptLen = 4 + 20 * parsed.pubkeys.length;
+    const swapped = lock.slice();
+    swapped.set(parsed.signatures[1]!, scriptLen);
+    swapped.set(parsed.signatures[0]!, scriptLen + 65);
+
+    const tx = clone(ms.tx);
+    tx.witnesses[i] = replaceLock(i, swapped);
+    const results = verifyTx(tx, bindAll(tx, ms.proofs));
+    assert.ok(results.some((r) => r.profile?.includes("multisig") && r.verdict === "verified"));
+  });
+
+  it("rejects a zeroed signature", () => {
+    const g = msGroup();
+    const i = g.inputs[0]!;
+    const lock = witnessLock(ms.tx.witnesses[i]!)!;
+    const parsed = decodeMultisigLock(lock)!;
+    const scriptLen = 4 + 20 * parsed.pubkeys.length;
+    const broken = lock.slice();
+    broken.fill(0, scriptLen, scriptLen + 65);
+
+    const tx = clone(ms.tx);
+    tx.witnesses[i] = replaceLock(i, broken);
+    const results = verifyTx(tx, bindAll(tx, ms.proofs));
+    assert.ok(results.some((r) => r.verdict === "bad-signature"));
+  });
+
+  it("rejects a truncated lock field", () => {
+    const g = msGroup();
+    const i = g.inputs[0]!;
+    const lock = witnessLock(ms.tx.witnesses[i]!)!;
+    const tx = clone(ms.tx);
+    tx.witnesses[i] = replaceLock(i, lock.slice(0, lock.length - 1));
+    const results = verifyTx(tx, bindAll(tx, ms.proofs));
+    assert.ok(results.some((r) => r.verdict === "bad-signature"));
   });
 });
 

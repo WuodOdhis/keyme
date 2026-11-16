@@ -102,6 +102,11 @@ export function encodeTransaction(t: Transaction): Uint8Array {
   return table(encodeRawTransaction(t), dynVec(t.witnesses.map((w) => bytesVec(hexToBytes(w)))));
 }
 
+/** A transaction with its witnesses removed. Binding hashes RawTransaction, so witnesses are dead weight. */
+export function stripWitnesses(t: Transaction): Transaction {
+  return { ...t, witnesses: [] };
+}
+
 // ---------------------------------------------------------------- RPC JSON
 
 interface RpcOutPoint {

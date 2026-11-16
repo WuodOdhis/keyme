@@ -206,6 +206,13 @@ is allowed between them.
 |---|---|---|
 | 2026-11-16 | v1.0 frozen | Initial scope agreement: stages 0–2 here, DAO funding afterwards |
 
+## 11a. Progress log (status only; scope unchanged)
+
+| Date | Item | State |
+|---|---|---|
+| 2026-11-16 | 0.1 legacy multisig | implementation done from source; awaiting an observed legacy spend |
+| 2026-11-16 | 0.2 multisig V2 | closed — verified against a mainnet 3-of-5 spend (fiber-scripts PR #34) |
+
 ---
 
 ## 12. Effort summary

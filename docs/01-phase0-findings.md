@@ -88,8 +88,8 @@ Six mainnet fixtures in `packages/psct-core/fixtures`. The offline test (`npm te
 re-binds, and re-verifies all of them with no RPC:
 
 ```
-fixtures              6
-groups verified       6
+fixtures              7
+groups verified       8
 refused: no profile   0
 refused: unknown lock 0
 failures              0
@@ -116,7 +116,7 @@ fixture that uses it and dumps readable strings from the deployment cell.
 
 ## 6. Hostile corpus, executable
 
-`src/hostile.test.ts` runs under `npm test` (17 tests). It is the acceptance criteria for D1:
+`src/hostile.test.ts` runs under `npm test` (21 tests). It is the acceptance criteria for D1:
 
 | Case | Expected |
 |---|---|
@@ -129,6 +129,9 @@ fixture that uses it and dumps readable strings from the deployment cell.
 | reordered inputs | nothing verifies |
 | perturbed signature bytes | signature fails |
 | malformed signature | verdict, never an exception |
+| multisig: real 3-of-5 spend | verified |
+| multisig: swapped signature order | still verified (order-independent) |
+| multisig: zeroed signature / truncated lock | rejected |
 | unknown code hash | refused |
 | known lock with no profile (OmniLock) | refused, named |
 
@@ -144,7 +147,49 @@ service.
   `sighash-all/secp256k1-blake160/v1`; multisig needs its own placeholder and ordering rules.
 - An empty witness is not "no witness": it is a 16-byte empty `WitnessArgs` for sighash-all.
 
-## 8. Next
+## 8. Multisig (stage 0.1 / 0.2)
+
+Rules derived from `ckb-system-scripts/c/secp256k1_blake160_multisig_all.c`, not from docs:
+
+```
+script args   = blake160(multisig_script) [20B] + optional since [8B LE]
+multisig_script = [0][require_first_n][threshold][pubkeys_cnt][pubkey_hash × n]
+witness lock  = multisig_script + [signature × threshold]        (exact length, no padding)
+```
+
+Three things make it different from a single-key lock:
+
+1. **The placeholder is not 65 zero bytes.** The lock zeroes the trailing `65 × threshold` bytes of
+   the lock field in place, so the witness length and every table offset stay unchanged.
+2. **Signatures are matched, not slotted.** Each signature is recovered and matched to the first
+   unused pubkey hash. Order is therefore not required — but canonical finalization should order by
+   pubkey position so the result is deterministic.
+3. **`require_first_n` is positional.** After threshold matching, the first N pubkey positions must
+   all be used.
+
+Optional `since` in args is enforced with `check_since`: every group input must carry the same since
+flags and a value at least as large, with epoch-fraction comparison for the epoch flag.
+
+### Evidence
+
+Validated against a real mainnet **3-of-5** spend: the fiber-scripts PR #34 upgrade transaction
+`0x4396de69818bd88b7fce64797ccec25d1294912d56846432f29fd192120992ee`.
+
+- lock: `Secp256k1MultisigV2`, `hash_type: data1`, 20-byte args (no since)
+- witness lock field: 299 bytes = 4 + 20×5 + 65×3
+- 3 signers recovered and matched; `require_first_n = 0`
+- fee: 81,893 shannons
+- verified offline from the deploy file's embedded `used_input_txs` — no RPC at verify time
+
+That fixture is 1.27 MB because the transaction is a contract deployment, so the spent cell's data is
+a compiled binary. It is committed as-is; if repo size becomes a problem, the fix is fetch-on-demand
+with a pinned hash, not dropping the proof.
+
+Legacy multisig is implemented from the same source but has not yet appeared in the corpus. Stage 0.1
+needs one observed legacy spend before it can be called closed; until then it is "implemented, V2
+validated".
+
+## 9. Next
 
 1. Profiles for the user-facing locks that still have none: OmniLock, the three multisig deployments,
    JoyID, NostrLock. Multisig first — it is the actual treasury use case and it exercises the

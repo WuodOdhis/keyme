@@ -20,6 +20,7 @@ export interface Fixture {
 }
 
 const DIR = join(process.cwd(), "fixtures");
+const cache = new Map<string, Fixture>();
 
 function reviveScript(o: Script): Script {
   return { codeHash: o.codeHash, hashType: o.hashType, args: o.args };
@@ -48,20 +49,36 @@ export function reviveTx(o: any): Transaction {
   };
 }
 
+/** Generic JSON projection: bigint -> decimal string, recursively. */
+export function toJson(value: unknown): unknown {
+  if (typeof value === "bigint") return value.toString();
+  if (Array.isArray(value)) return value.map(toJson);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, toJson(v)]),
+    );
+  }
+  return value;
+}
+
 export function loadManifest(): ManifestEntry[] {
   return JSON.parse(readFileSync(join(DIR, "manifest.json"), "utf8"));
 }
 
 export function loadFixture(hash: string): Fixture {
+  const hit = cache.get(hash);
+  if (hit) return hit;
   const entry = loadManifest().find((m) => m.hash === hash);
   if (!entry) throw new Error(`fixture ${hash} not in manifest`);
   const f = JSON.parse(readFileSync(join(DIR, `${hash}.json`), "utf8"));
-  return {
+  const fixture: Fixture = {
     hash,
     tx: reviveTx(f.tx),
     proofs: f.proofs.map((p: any) => ({ prevTx: reviveTx(p.prevTx), index: p.index })),
     fee: entry.fee,
   };
+  cache.set(hash, fixture);
+  return fixture;
 }
 
 /** A fixture whose first lock group is a supported, verifiable profile. */

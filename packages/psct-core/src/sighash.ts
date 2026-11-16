@@ -2,7 +2,7 @@
 
 import { concat, hexToBytes } from "./bytes.js";
 import { ckbHash, txHash } from "./hash.js";
-import { readBytes, readBytesOpt, tableField, tableOffsets, u64 } from "./molecule.js";
+import { readBytes, readBytesOpt, readU32, tableOffsets, u64 } from "./molecule.js";
 import type { Transaction } from "./ckb.js";
 
 export interface WitnessArgs {
@@ -65,21 +65,42 @@ export function assertWitnessArgs(w: Uint8Array, where: string): void {
 }
 
 /**
+ * Multi-signature placeholder: zero the trailing signature region of the lock field, leaving the
+ * lock field's length and every table offset untouched.
+ *
+ * The lock field is `[reserved][require_first_n][threshold][pubkeys_cnt][pubkey_hash × n][sig × t]`,
+ * and the script hashes the witness with the last `65 * threshold` bytes zeroed.
+ */
+export function zeroSignatureRegion(witness: Uint8Array, sigBytes: number): Uint8Array {
+  if (witness.length === 0) throw new Error("empty witness: expected WitnessArgs");
+  const lockStart = tableOffsets(witness, 0, 3)[0]!;
+  const lockLen = readU32(witness, lockStart);
+  if (sigBytes > lockLen) throw new Error(`signature region ${sigBytes} exceeds lock length ${lockLen}`);
+  const out = witness.slice();
+  const dataStart = lockStart + 4;
+  out.fill(0, dataStart + lockLen - sigBytes, dataStart + lockLen);
+  return out;
+}
+
+/**
  * Sighash-all message for one lock group.
  *
  * blake2b( tx_hash
- *        || u64le(len(w0')) || w0'          // group's first input, lock zeroed
+ *        || u64le(len(w0')) || w0'          // group's first input, transformed by the profile
  *        || u64le(len(wi))  || wi  ...      // other inputs sharing this lock
  *        || u64le(len(wj))  || wj  ... )    // witnesses with index >= inputs.length
  */
-export function sighashAllMessage(tx: Transaction, groupIndices: number[]): Uint8Array {
+export function sighashMessage(
+  tx: Transaction,
+  groupIndices: number[],
+  transformFirst: (witness: Uint8Array) => Uint8Array,
+): Uint8Array {
   if (groupIndices.length === 0) throw new Error("empty script group");
   const sorted = [...groupIndices].sort((a, b) => a - b);
   const parts: Uint8Array[] = [hexToBytes(txHash(tx))];
 
   const first = sorted[0]!;
-  const w0raw = tx.witnesses[first] ?? "0x";
-  const w0 = withZeroedLock(hexToBytes(w0raw));
+  const w0 = transformFirst(hexToBytes(tx.witnesses[first] ?? "0x"));
   parts.push(u64(w0.length), w0);
 
   for (const idx of sorted.slice(1)) {
@@ -91,6 +112,11 @@ export function sighashAllMessage(tx: Transaction, groupIndices: number[]): Uint
     parts.push(u64(w.length), w);
   }
   return ckbHash(concat(...parts));
+}
+
+/** Sighash-all with the secp256k1-blake160 placeholder (65 zero bytes). */
+export function sighashAllMessage(tx: Transaction, groupIndices: number[]): Uint8Array {
+  return sighashMessage(tx, groupIndices, (w) => withZeroedLock(w, 65));
 }
 
 /** Lock field of a witness, or null if absent / not WitnessArgs. */

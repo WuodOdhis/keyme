@@ -14,19 +14,11 @@ import type { RpcTransaction, Transaction } from "../ckb.js";
 import { resolveProofs } from "../psct/proofs.js";
 import { bindAll } from "../psct/bind.js";
 import { classifyLock } from "../profiles.js";
+import { toJson } from "../fixtures.js";
 import { txHash } from "../hash.js";
 import type { InputProof } from "../psct/bind.js";
 
 const OUT = join(process.cwd(), "fixtures");
-
-function ser(v: unknown): unknown {
-  if (typeof v === "bigint") return v.toString();
-  if (Array.isArray(v)) return v.map(ser);
-  if (v && typeof v === "object") {
-    return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, ser(x)]));
-  }
-  return v;
-}
 
 async function main() {
   const want = Number(process.argv[2] ?? 6);
@@ -66,8 +58,8 @@ async function main() {
 
       const fixture = {
         hash,
-        tx: ser(tx),
-        proofs: proofs.map((p: InputProof) => ({ index: p.index, prevTx: ser(p.prevTx) })),
+        tx: toJson(tx),
+        proofs: proofs.map((p: InputProof) => ({ index: p.index, prevTx: toJson(p.prevTx) })),
       };
       writeFileSync(join(OUT, `${hash}.json`), JSON.stringify(fixture, null, 2));
       manifest.push({ hash, inputs: tx.inputs.length, outputs: tx.outputs.length, fee: fee.toString() });
