@@ -23,6 +23,8 @@ import {
 } from "./psct/container.js";
 import { encodeCbor, decodeCbor } from "./cbor.js";
 import { toCkbCli, fromCkbCli } from "./ckbcli.js";
+import { parseCkb, multisigLock, LEGACY_MULTISIG } from "./apps/coordinator.js";
+import { encodeAddress } from "./address.js";
 import { encodeTransaction } from "./ckb.js";
 import { ckbHash } from "./hash.js";
 import { bindAll } from "./psct/bind.js";
@@ -224,6 +226,37 @@ describe("ckb-cli interop", () => {
     const p = psctFor(dao);
     extractSignatures(p, dao);
     assert.throws(() => toCkbCli(p), /lossy export/);
+  });
+});
+
+describe("coordinator helpers", () => {
+  it("parses CKB decimal amounts", () => {
+    assert.equal(parseCkb("1"), 100_000_000n);
+    assert.equal(parseCkb("0.00000001"), 1n);
+    assert.equal(parseCkb("100.5"), 10_050_000_000n);
+    assert.throws(() => parseCkb("1.123456789"), /bad CKB amount/);
+  });
+
+  it("derives the multisig lock and template from signers", () => {
+    const locks = manifest.flatMap((m) => {
+      const f = loadFixture(m.hash);
+      return bindAll(f.tx, f.proofs)
+        .map((b) => b.cellOutput.lock)
+        .filter((l) => classifyLock(l).profile === SECP_PROFILE);
+    });
+    const unique = new Map(locks.map((l) => [l.args, l]));
+    const signers = [...unique.values()].slice(0, 3).map((l) => encodeAddress(l, "ckt", "short"));
+    assert.equal(signers.length, 3);
+
+    const { lock, lockTemplate } = multisigLock({
+      signers,
+      threshold: 2,
+      requireFirstN: 0,
+      version: "legacy",
+    });
+    assert.equal(lock.codeHash, LEGACY_MULTISIG);
+    assert.equal((lock.args.length - 2) / 2, 20);
+    assert.equal(lockTemplate.length, 4 + 20 * 3 + 65 * 2);
   });
 });
 

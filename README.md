@@ -27,6 +27,7 @@ must therefore be hash-bound to the transaction that created it.
 | `docs/01` | Phase 0 findings and the fee-inflation attack |
 | `docs/02` | **Frozen implementation plan, stages 0–2** |
 | `docs/03` | Portability contract for a second implementation |
+| `docs/04` | Stage 2: coordinator + offline signer, devnet run |
 | `spec/psct-v0.md` | **PSCT v0 specification (frozen)** |
 | `packages/psct-core` | Molecule, sighash, binding, inspect, verify, PSCT container |
 | `packages/psct-core/vectors` | Signed conformance vectors (base64) |
@@ -49,9 +50,11 @@ Stage 0 complete; stage 1 in progress.
 - Independent Rust implementation reproduces `tx_hash` and `full_tx_hash` byte-for-byte on every
   vector and verifies every signer.
 - `ckb-cli` interop: export/import round-trips secp and multisig; lossy exports are refused.
-- 59 tests across the verifier, the container and interop, plus the Rust conformance run.
+- Coordinator + offline signer working end-to-end on a devnet: secp transfer and a 2-of-3 multisig
+  spend signed by two separate processes, combined, and accepted by consensus.
+- 61 tests across the verifier, container and interop, plus the Rust conformance run.
 
-Stage 1 is complete. Next: stage 2, the watch-only coordinator and the offline software signer.
+Stage 1 is complete. Stage 2 is working on devnet; testnet run and the web coordinator are next.
 
 Not modelled (and refused): OmniLock auth schemes, JoyID, NostrLock, Spore clusters/DIDs.
 

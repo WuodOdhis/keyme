@@ -229,6 +229,12 @@ is allowed between them.
 | 2026-11-16 | 1.4 Rust implementation | **closed** — byte-identical `tx_hash` and `full_tx_hash`, all groups verified |
 | 2026-11-16 | 1.7 spec | written from what the verifier enforces |
 | 2026-11-16 | 1.6 `ckb-cli` interop | **closed** — export/import round-trip; lossy exports refused |
+| 2026-11-16 | 2.1 coordinator | **closed** — transfer builder, live cells, proofs, PSCT export |
+| 2026-11-16 | 2.2 software signer | **closed** — bind, display, refuse, sign, self-check |
+| 2026-11-16 | 2.3 round trip | **closed** — create → sign → finalize → broadcast (devnet) |
+| 2026-11-16 | 2.4 multisig rounds | **closed** — two signers, combine, finalize, broadcast (devnet) |
+| — | 2.5 testnet scenarios | devnet equivalent done; testnet run pending |
+| — | 2.6 threat-model walk | pending |
 
 ---
 

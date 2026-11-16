@@ -16,6 +16,7 @@ npm test                 # hostile corpus (17 tests) + offline fixture verificat
 npm run selftest         # live: 25 mainnet txs, hash + signature
 npm run redteam          # the input-claim attack demo
 npm run devnet:multisig  # 2-of-3 legacy spend against a local devnet (needs `offckb node`)
+npm run demo             # coordinator + signer end-to-end on a devnet (needs `offckb node`)
 npx tsx src/cli.ts cli-export <file.psct.b64>   # ckb-cli tx file to stdout
 npx tsx src/cli.ts inspect <txhash>
 npx tsx src/cli.ts verify  <txhash>
@@ -56,6 +57,10 @@ src/
     make-vectors.ts  regenerate conformance vectors
     devnet-multisig.ts  2-of-3 legacy spend against a local devnet
     identify-lock.ts  name an unknown code hash from its deployment cell
+  apps/
+    coordinator.ts  watch-only builder: live cells -> PSCT
+    signer.ts       offline signer: bind, display, refuse, sign
+    demo.ts         end-to-end devnet run (secp + multisig)
 fixtures/         transactions + proofs + manifest
 vectors/          signed PSCT conformance vectors (base64)
 ```
