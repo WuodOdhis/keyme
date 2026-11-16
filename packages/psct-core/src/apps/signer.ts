@@ -15,7 +15,7 @@ import { secp256k1 } from "@noble/curves/secp256k1";
 import { bytesToHex, concat, fmtCkb, hexToBytes } from "../bytes.js";
 import { decodeRawTransaction, type Script, type Transaction } from "../ckb.js";
 import { blake160, ckbHash, scriptHash } from "../hash.js";
-import { classifyLock, MULTISIG_PROFILE, MULTISIG_V2_PROFILE, SECP_PROFILE } from "../profiles.js";
+import { classifyLock, classifyType, MULTISIG_PROFILE, MULTISIG_V2_PROFILE, SECP_PROFILE } from "../profiles.js";
 import { bindAll } from "../psct/bind.js";
 import { inspect } from "../psct/inspect.js";
 import { encodeWitnessArgs, sighashMessage, zeroSignatureRegion, withZeroedLock } from "../sighash.js";
@@ -124,6 +124,17 @@ export function signPsct(psct: Psct, privkeyHex: string): SignResult {
     if (g.profile !== SECP_PROFILE && g.profile !== MULTISIG_PROFILE && g.profile !== MULTISIG_V2_PROFILE) {
       throw new Error(`unsupported lock ${classifyLock(g.lock).name}; refusing to sign any part of it`);
     }
+  }
+
+  // Type scripts have no signing profile, but an unknown one can implement any rule. Under the
+  // strict model an unmodelled contract is not certifiable, so it is refused, not just warned about.
+  const unknownType = [...bound.map((b) => b.cellOutput.type), ...tx.outputs.map((o) => o.type)].find(
+    (t) => t && classifyType(t) === "unknown type",
+  );
+  if (unknownType) {
+    throw new Error(
+      `unknown type script ${unknownType.codeHash.slice(0, 18)}…; refusing to sign an uncertifiable contract`,
+    );
   }
   const inspection = inspect(tx, bound, { headers: headersMap(psct) });
   const daoProblem = inspection.dao.find((d) => d.issues.length > 0);

@@ -97,6 +97,20 @@ spend: committed in 26818
 The spend transaction was built with no key present, signed by two separate processes, combined, and
 accepted by consensus. That is the stage-2 exit criterion, on devnet.
 
+### Testnet
+
+The same code path against `https://testnet.ckb.dev`, funded from the Pudge faucet:
+
+```
+from ckt1qyqwafr8dknhpd5v6n7u4kvxrgmms4pef0cs79x3um
+coordinator 0xbb10d0b6…1a85 inputs=1 fee=1000
+signer      0xeea4676d… groups=1
+sent        0xbb10d0b6fb9ad72f6618f29020a1f065e73b4435f5ce24515afcbcb5c50a1a85
+committed in 23084406
+```
+
+Only the network dep table changed. No code was forked for testnet.
+
 ---
 
 ## 5. Known limits

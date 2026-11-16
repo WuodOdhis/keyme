@@ -233,8 +233,8 @@ is allowed between them.
 | 2026-11-16 | 2.2 software signer | **closed** — bind, display, refuse, sign, self-check |
 | 2026-11-16 | 2.3 round trip | **closed** — create → sign → finalize → broadcast (devnet) |
 | 2026-11-16 | 2.4 multisig rounds | **closed** — two signers, combine, finalize, broadcast (devnet) |
-| — | 2.5 testnet scenarios | devnet equivalent done; testnet run pending |
-| — | 2.6 threat-model walk | pending |
+| 2026-11-16 | 2.5 testnet scenarios | **closed** — coordinator → signer → broadcast, committed at block 23,084,406 |
+| 2026-11-16 | 2.6 threat-model walk | **closed** — `docs/05-threat-model.md`; found and fixed the unknown-type gap |
 
 ---
 

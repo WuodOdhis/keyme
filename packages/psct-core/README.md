@@ -17,6 +17,7 @@ npm run selftest         # live: 25 mainnet txs, hash + signature
 npm run redteam          # the input-claim attack demo
 npm run devnet:multisig  # 2-of-3 legacy spend against a local devnet (needs `offckb node`)
 npm run demo             # coordinator + signer end-to-end on a devnet (needs `offckb node`)
+npx tsx src/apps/testnet-demo.ts --key-file key.hex --from ckt1...   # same flow on testnet
 npx tsx src/cli.ts cli-export <file.psct.b64>   # ckb-cli tx file to stdout
 npx tsx src/cli.ts inspect <txhash>
 npx tsx src/cli.ts verify  <txhash>

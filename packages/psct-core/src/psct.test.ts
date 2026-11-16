@@ -24,6 +24,8 @@ import {
 import { encodeCbor, decodeCbor } from "./cbor.js";
 import { toCkbCli, fromCkbCli } from "./ckbcli.js";
 import { parseCkb, multisigLock, LEGACY_MULTISIG } from "./apps/coordinator.js";
+import { signPsct } from "./apps/signer.js";
+import { secp256k1 } from "@noble/curves/secp256k1";
 import { encodeAddress } from "./address.js";
 import { encodeTransaction } from "./ckb.js";
 import { ckbHash } from "./hash.js";
@@ -257,6 +259,31 @@ describe("coordinator helpers", () => {
     assert.equal(lock.codeHash, LEGACY_MULTISIG);
     assert.equal((lock.args.length - 2) / 2, 20);
     assert.equal(lockTemplate.length, 4 + 20 * 3 + 65 * 2);
+  });
+});
+
+describe("signer policy", () => {
+  it("refuses an unknown type script instead of signing an uncertifiable contract", () => {
+    const f = manifest
+      .map((m) => loadFixture(m.hash))
+      .find((x) =>
+        bindAll(x.tx, x.proofs).every(
+          (b) => classifyLock(b.cellOutput.lock).profile === SECP_PROFILE,
+        ),
+      )!;
+    const base = psctFor(f);
+    const tx = psctTransaction(base);
+    tx.outputs[0] = {
+      ...tx.outputs[0]!,
+      type: { codeHash: "0x" + "22".repeat(32), hashType: "type", args: "0x" },
+    };
+    const psct = buildPsct(tx, {
+      network: "ckb",
+      proofs: f.proofs.map((p) => ({ prevTx: p.prevTx, index: p.index, blockHash: p.blockHash })),
+      headers: f.headers,
+    });
+    const key = bytesToHex(secp256k1.utils.randomPrivateKey());
+    assert.throws(() => signPsct(psct, key), /unknown type script/);
   });
 });
 

@@ -27,18 +27,19 @@ must therefore be hash-bound to the transaction that created it.
 | `docs/01` | Phase 0 findings and the fee-inflation attack |
 | `docs/02` | **Frozen implementation plan, stages 0–2** |
 | `docs/03` | Portability contract for a second implementation |
-| `docs/04` | Stage 2: coordinator + offline signer, devnet run |
+| `docs/04` | Stage 2: coordinator + offline signer, devnet and testnet runs |
+| `docs/05` | Threat-model walk against D1, with residual risks |
 | `spec/psct-v0.md` | **PSCT v0 specification (frozen)** |
 | `packages/psct-core` | Molecule, sighash, binding, inspect, verify, PSCT container |
 | `packages/psct-core/vectors` | Signed conformance vectors (base64) |
 | `packages/psct-rs` | Independent Rust implementation (conformance) |
 | `packages/psct-core/fixtures` | Mainnet / testnet / devnet transactions + proofs |
 
-Later: the coordinator, the software signer, QR, hardware.
+Later: QR transport, hardware.
 
 ## Status
 
-Stage 0 complete; stage 1 in progress.
+Stages 0–2 complete on devnet and testnet.
 
 - 13 offline-verifiable fixtures: mainnet (plain, V2 multisig, DAO prepare + withdraw), testnet
   (xUDT, Spore), devnet (legacy 2-of-3 multisig accepted by consensus). 15 lock groups verified.
@@ -50,11 +51,13 @@ Stage 0 complete; stage 1 in progress.
 - Independent Rust implementation reproduces `tx_hash` and `full_tx_hash` byte-for-byte on every
   vector and verifies every signer.
 - `ckb-cli` interop: export/import round-trips secp and multisig; lossy exports are refused.
-- Coordinator + offline signer working end-to-end on a devnet: secp transfer and a 2-of-3 multisig
-  spend signed by two separate processes, combined, and accepted by consensus.
-- 61 tests across the verifier, container and interop, plus the Rust conformance run.
+- Coordinator + offline signer working end-to-end: a devnet secp transfer, a 2-of-3 multisig spend
+  signed by two separate processes, and a testnet transfer committed at block 23,084,406.
+- Threat-model walk against D1; it found a gap (unknown type scripts were only warned about) which is
+  now refused by the signer.
+- 62 tests across the verifier, container and interop, plus the Rust conformance run.
 
-Stage 1 is complete. Stage 2 is working on devnet; testnet run and the web coordinator are next.
+The watch-only web UI is a wrapper over the same builder. Stage 3 (QR) is next.
 
 Not modelled (and refused): OmniLock auth schemes, JoyID, NostrLock, Spore clusters/DIDs.
 
