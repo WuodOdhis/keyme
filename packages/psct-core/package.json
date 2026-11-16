@@ -10,6 +10,7 @@
     "selftest": "tsx src/scripts/selftest.ts",
     "collect": "tsx src/scripts/collect.ts",
     "redteam": "tsx src/scripts/redteam.ts",
+    "devnet:multisig": "tsx src/scripts/devnet-multisig.ts",
     "inspect": "tsx src/cli.ts inspect",
     "verify": "tsx src/cli.ts verify"
   },

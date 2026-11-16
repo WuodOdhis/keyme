@@ -1,0 +1,152 @@
+{
+  "hash": "0x9beeba56006cb77a01d21373d8db9c9bd0371b229c7c8362c2b1b09c67aa9e6e",
+  "tx": {
+    "version": 0,
+    "cellDeps": [
+      {
+        "outPoint": {
+          "txHash": "0xf8de3bb47d055cdf460d93a2a6e1b05f7432f9777c8c474abf4eec1d4aee5d37",
+          "index": 0
+        },
+        "depType": "dep_group"
+      },
+      {
+        "outPoint": {
+          "txHash": "0xfd694382e621f175ddf81ce91ce2ecf8bfc027d53d7d31b8438f7d26fc37fd19",
+          "index": 0
+        },
+        "depType": "code"
+      }
+    ],
+    "headerDeps": [],
+    "inputs": [
+      {
+        "since": "0",
+        "previousOutput": {
+          "txHash": "0x4655732e3d14d733db61c437d8b714ce500e577e6b68c4b42ac3b668cc72ce1a",
+          "index": 1
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "capacity": "60499999045",
+        "lock": {
+          "codeHash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          "hashType": "type",
+          "args": "0xf72c4cdc55b5075c59868c9a702b718a5ec9681b"
+        },
+        "type": {
+          "codeHash": "0xbbad126377d45f90a8ee120da988a2d7332c78ba8fd679aab478a19d6c133494",
+          "hashType": "data1",
+          "args": "0xa117eb852c0daf78ad79f62eb2d19716e57a0ac974ce25db31940fd54d00a459"
+        }
+      }
+    ],
+    "outputsData": [
+      "0xde010000100000001e000000ba0100000a000000696d6167652f6a70656798010000ffd8ffe000104a46494600010101004800480000ffdb0043000a07070807060a0808080b0a0a0b0e18100e0d0d0e1d15161118231f2524221f2221262b372f26293429212230413134393b3e3e3e252e4449433c48373d3e3bffdb0043010a0b0b0e0d0e1c10101c3b2822283b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3bffc0001108000a000a03012200021101031101ffc4001500010100000000000000000000000000000407ffc4001f1000030002020301010000000000000000010203040500110621314114ffc40014010100000000000000000000000000000000ffc40014110100000000000000000000000000000000ffda000c03010002110311003f0064773b5c2d6f9b6c2db3cc7c76ced8e1499eec7f8dd10b40a127a9a92ce9ebd9631007de50fc4ed5c9f0ed2def57ad6baf83d28ec599d8cd49249fa49fde29f4daaa62e462beb30db1f2aa6d91230529672412cc3ae99bb00f67dfa1c4c632c684e10924a5250939a28554503a0001f001f9c0ffd92000000021a30f2b2f4927dbd6fd3917990af0dbb868438f44184e84d515f9af84ae4861"
+    ],
+    "witnesses": [
+      "0x5500000010000000550000005500000041000000a3e6a3a06a0945f324e7f673206fe46e5b88a559ce878e72b6da29013abffbcd6b0c67f4c887a9f86ce209046b9a94d3f59ae1dfb4a78ba90552a27cc30f0f5100"
+    ]
+  },
+  "proofs": [
+    {
+      "index": 1,
+      "prevTx": {
+        "version": 0,
+        "cellDeps": [
+          {
+            "outPoint": {
+              "txHash": "0xf8de3bb47d055cdf460d93a2a6e1b05f7432f9777c8c474abf4eec1d4aee5d37",
+              "index": 0
+            },
+            "depType": "dep_group"
+          },
+          {
+            "outPoint": {
+              "txHash": "0x49551a20dfe39231e7db49431d26c9c08ceec96a29024eef3acc936deeb2ca76",
+              "index": 0
+            },
+            "depType": "code"
+          },
+          {
+            "outPoint": {
+              "txHash": "0xfd694382e621f175ddf81ce91ce2ecf8bfc027d53d7d31b8438f7d26fc37fd19",
+              "index": 0
+            },
+            "depType": "code"
+          },
+          {
+            "outPoint": {
+              "txHash": "0x1b1c11e73413997ed3ca0743c551d543cb454c87ff089cb33b65aaea6d26e215",
+              "index": 0
+            },
+            "depType": "code"
+          }
+        ],
+        "headerDeps": [],
+        "inputs": [
+          {
+            "since": "0",
+            "previousOutput": {
+              "txHash": "0x1b1c11e73413997ed3ca0743c551d543cb454c87ff089cb33b65aaea6d26e215",
+              "index": 0
+            }
+          },
+          {
+            "since": "0",
+            "previousOutput": {
+              "txHash": "0x1b1c11e73413997ed3ca0743c551d543cb454c87ff089cb33b65aaea6d26e215",
+              "index": 1
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "capacity": "18500000000",
+            "lock": {
+              "codeHash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+              "hashType": "type",
+              "args": "0x8930e1e7f192adb3e3f600bd6ae935609d1f814b"
+            },
+            "type": {
+              "codeHash": "0x598d793defef36e2eeba54a9b45130e4ca92822e1d193671f490950c3b856080",
+              "hashType": "data1",
+              "args": "0x21a30f2b2f4927dbd6fd3917990af0dbb868438f44184e84d515f9af84ae4861"
+            }
+          },
+          {
+            "capacity": "60500000000",
+            "lock": {
+              "codeHash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+              "hashType": "type",
+              "args": "0x8930e1e7f192adb3e3f600bd6ae935609d1f814b"
+            },
+            "type": {
+              "codeHash": "0xbbad126377d45f90a8ee120da988a2d7332c78ba8fd679aab478a19d6c133494",
+              "hashType": "data1",
+              "args": "0xa117eb852c0daf78ad79f62eb2d19716e57a0ac974ce25db31940fd54d00a459"
+            }
+          },
+          {
+            "capacity": "4920599227744",
+            "lock": {
+              "codeHash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+              "hashType": "type",
+              "args": "0x8930e1e7f192adb3e3f600bd6ae935609d1f814b"
+            },
+            "type": null
+          }
+        ],
+        "outputsData": [
+          "0x3a0000000c0000001c0000000c0000005465737420636c75737465721a0000004465736372697074696f6e206f662074686520636c7573746572",
+          "0xde010000100000001e000000ba0100000a000000696d6167652f6a70656798010000ffd8ffe000104a46494600010101004800480000ffdb0043000a07070807060a0808080b0a0a0b0e18100e0d0d0e1d15161118231f2524221f2221262b372f26293429212230413134393b3e3e3e252e4449433c48373d3e3bffdb0043010a0b0b0e0d0e1c10101c3b2822283b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3bffc0001108000a000a03012200021101031101ffc4001500010100000000000000000000000000000407ffc4001f1000030002020301010000000000000000010203040500110621314114ffc40014010100000000000000000000000000000000ffc40014110100000000000000000000000000000000ffda000c03010002110311003f0064773b5c2d6f9b6c2db3cc7c76ced8e1499eec7f8dd10b40a127a9a92ce9ebd9631007de50fc4ed5c9f0ed2def57ad6baf83d28ec599d8cd49249fa49fde29f4daaa62e462beb30db1f2aa6d91230529672412cc3ae99bb00f67dfa1c4c632c684e10924a5250939a28554503a0001f001f9c0ffd92000000021a30f2b2f4927dbd6fd3917990af0dbb868438f44184e84d515f9af84ae4861",
+          "0x"
+        ],
+        "witnesses": []
+      }
+    }
+  ],
+  "headers": {}
+}

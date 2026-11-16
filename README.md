@@ -37,14 +37,14 @@ Stage 0 is in progress:
 
 - `tx_hash` reproduces the node on 25/25 transactions.
 - Signatures verify on 25/25 secp256k1 lock groups.
-- 9 offline-verifiable fixtures (mainnet + one testnet token mint); 10 lock groups, including a real
-  3-of-5 multisig spend and a DAO withdrawal whose interest and fee reconcile.
+- 13 offline-verifiable fixtures: mainnet (plain, V2 multisig, DAO prepare + withdraw), testnet
+  (xUDT, Spore), devnet (legacy 2-of-3 multisig accepted by consensus). 15 lock groups verified.
 - The input-claim attack (fee inflation without touching the signed bytes) is reproduced and
   rejected by the binding check.
-- 41 hostile tests; malformed input produces verdicts, never crashes.
+- 42 hostile tests; malformed input produces verdicts, never crashes.
 
-Covered: single-key secp256k1, multisig legacy + V2, Nervos DAO withdraw, xUDT, Spore (logic only —
-no chain fixture yet). Not yet: DAO prepare, OmniLock auth display, `since` display. See stage 0.
+Covered: single-key secp256k1, multisig legacy + V2, Nervos DAO prepare + withdraw, xUDT, Spore.
+Not modelled (and refused): OmniLock auth schemes, JoyID, NostrLock, Spore clusters/DIDs.
 
 ```bash
 cd packages/psct-core

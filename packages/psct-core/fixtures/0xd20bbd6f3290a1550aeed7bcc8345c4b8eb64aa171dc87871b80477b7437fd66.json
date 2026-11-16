@@ -1,0 +1,96 @@
+{
+  "hash": "0xd20bbd6f3290a1550aeed7bcc8345c4b8eb64aa171dc87871b80477b7437fd66",
+  "network": "devnet",
+  "tx": {
+    "version": 0,
+    "cellDeps": [
+      {
+        "outPoint": {
+          "txHash": "0x4d804f1495612631da202fe9902fa9899118554b08138cfe5dfb50e1ede76293",
+          "index": 1
+        },
+        "depType": "dep_group"
+      }
+    ],
+    "headerDeps": [],
+    "inputs": [
+      {
+        "since": "0",
+        "previousOutput": {
+          "txHash": "0xfb3551af7e6c25434406c7a3e5341ce7fe90a5d32a806f475e10896bc04910c1",
+          "index": 0
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "capacity": "9999999000",
+        "lock": {
+          "codeHash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          "hashType": "type",
+          "args": "0x758d311c8483e0602dfad7b69d9053e3f917457d"
+        },
+        "type": null
+      }
+    ],
+    "outputsData": [
+      "0x"
+    ],
+    "witnesses": [
+      "0xd600000010000000d6000000d6000000c2000000000002038e42b1999f265a0078503c4acec4d5e134534297758d311c8483e0602dfad7b69d9053e3f917457d9d1edebedf8f026c0d597c4c5cd3f45dec1f7557247f84ad1f327eaf720e595a81dbeee79988f2e07edfeb75659757e9923ec4aa6e59964bbfb39d7f2a533f6f8c2747629ad4b9ca3ae5d3ecff0e147cb2d421dd003ca63a71b1667bfea77368f34e780861604cbd0f42a971ac22c419e0aba8e4ef6e961777911d190bf9cb171ca99ab8f734d1e1629bcfedcaa93f2a0c3cac22aa01"
+    ]
+  },
+  "proofs": [
+    {
+      "index": 0,
+      "prevTx": {
+        "version": 0,
+        "cellDeps": [
+          {
+            "outPoint": {
+              "txHash": "0x4d804f1495612631da202fe9902fa9899118554b08138cfe5dfb50e1ede76293",
+              "index": 0
+            },
+            "depType": "dep_group"
+          }
+        ],
+        "headerDeps": [],
+        "inputs": [
+          {
+            "since": "0",
+            "previousOutput": {
+              "txHash": "0x1bb87da347a776a927ab6593e1e10304ca195f8e24279f039008d5e3115b1bf7",
+              "index": 22
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "capacity": "10000000000",
+            "lock": {
+              "codeHash": "0x5c5069eb0857efc65e1bca0c07df34c31663b3622fd3876c876320fc9634e2a8",
+              "hashType": "type",
+              "args": "0x04b93af4ac60384b52ba171d9fd67984b94c7a1e"
+            },
+            "type": null
+          },
+          {
+            "capacity": "4199989999999000",
+            "lock": {
+              "codeHash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+              "hashType": "type",
+              "args": "0x8e42b1999f265a0078503c4acec4d5e134534297"
+            },
+            "type": null
+          }
+        ],
+        "outputsData": [
+          "0x",
+          "0x"
+        ],
+        "witnesses": []
+      }
+    }
+  ],
+  "headers": {}
+}

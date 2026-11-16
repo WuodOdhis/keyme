@@ -232,3 +232,33 @@ export function fromRpcTx(t: RpcTransaction): Transaction {
     witnesses: t.witnesses,
   };
 }
+
+const DEP_TYPE_NAME: Record<number, DepType> = { 0: "code", 1: "dep_group" };
+
+/** Inverse of fromRpcTx: a transaction in the shape `send_transaction` expects. */
+export function toRpcTx(t: Transaction): unknown {
+  return {
+    version: `0x${t.version.toString(16)}`,
+    cell_deps: t.cellDeps.map((d) => ({
+      out_point: { tx_hash: d.outPoint.txHash, index: `0x${d.outPoint.index.toString(16)}` },
+      dep_type: d.depType,
+    })),
+    header_deps: t.headerDeps,
+    inputs: t.inputs.map((i) => ({
+      since: `0x${i.since.toString(16)}`,
+      previous_output: {
+        tx_hash: i.previousOutput.txHash,
+        index: `0x${i.previousOutput.index.toString(16)}`,
+      },
+    })),
+    outputs: t.outputs.map((o) => ({
+      capacity: `0x${o.capacity.toString(16)}`,
+      lock: { code_hash: o.lock.codeHash, hash_type: o.lock.hashType, args: o.lock.args },
+      type: o.type
+        ? { code_hash: o.type.codeHash, hash_type: o.type.hashType, args: o.type.args }
+        : null,
+    })),
+    outputs_data: t.outputsData,
+    witnesses: t.witnesses,
+  };
+}

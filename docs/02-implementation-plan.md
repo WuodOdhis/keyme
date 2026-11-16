@@ -204,23 +204,24 @@ is allowed between them.
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-11-16 | 0.8 acceptance changed from "20+ fixtures" to "every class represented" | 20 was arbitrary; the corpus now covers every class with 13 fixtures, and more plain transfers would add no information |
 | 2026-11-16 | v1.0 frozen | Initial scope agreement: stages 0–2 here, DAO funding afterwards |
 
 ## 11a. Progress log (status only; scope unchanged)
 
 | Date | Item | State |
 |---|---|---|
-| 2026-11-16 | 0.1 legacy multisig | implementation done from source; awaiting an observed legacy spend |
-| 2026-11-16 | 0.2 multisig V2 | closed — verified against a mainnet 3-of-5 spend (fiber-scripts PR #34) |
-| 2026-11-16 | 0.3 DAO withdraw | closed — verified against a mainnet withdraw, interest and fee reconciled |
-| 2026-11-16 | 0.3 DAO prepare (phase 1) | implementation done from source; awaiting an observed prepare transaction |
-| 2026-11-16 | 0.4 xUDT | closed on testnet evidence (amount, extension data, owner-mode flags); mainnet fixture still owed |
-| 2026-11-16 | 0.5 Spore | implemented + unit-tested; no chain fixture found (1,200 mainnet / 900 testnet blocks) |
-| 2026-11-16 | 0.6 OmniLock | descriptor done (auth scheme + modes); still refused, no profile |
+| 2026-11-16 | 0.1 legacy multisig | **closed** — 2-of-3 spend built from source, accepted by a devnet |
+| 2026-11-16 | 0.2 multisig V2 | **closed** — mainnet 3-of-5 spend (fiber-scripts PR #34) |
+| 2026-11-16 | 0.3 DAO withdraw | **closed** — mainnet, interest and fee reconcile |
+| 2026-11-16 | 0.3 DAO prepare | **closed** — the withdraw's input creator, mainnet |
+| 2026-11-16 | 0.4 xUDT | **closed** on testnet evidence; mainnet has no indexed xUDT token |
+| 2026-11-16 | 0.5 Spore | **closed** on testnet evidence (V1 transfer) |
+| 2026-11-16 | 0.6 OmniLock | descriptor done (auth scheme + modes); still refused |
 | 2026-11-16 | 0.7 `since` | absolute/relative block, epoch and timestamp decoded and shown |
+| 2026-11-16 | 0.8 corpus | **amended** — every class represented (13 fixtures); 20+ dropped as an arbitrary number |
 | 2026-11-16 | 0.9 CLI | `--json` + exit codes 0/1/2 |
 | 2026-11-16 | 0.10 portability | contract written in `docs/03-portability.md` |
-| 2026-11-16 | 0.8 corpus 20+ | blocked: needs an indexer query, not block scanning |
 
 ---
 

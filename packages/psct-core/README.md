@@ -15,6 +15,7 @@ npm run typecheck
 npm test                 # hostile corpus (17 tests) + offline fixture verification
 npm run selftest         # live: 25 mainnet txs, hash + signature
 npm run redteam          # the input-claim attack demo
+npm run devnet:multisig  # 2-of-3 legacy spend against a local devnet (needs `offckb node`)
 npx tsx src/cli.ts inspect <txhash>
 npx tsx src/cli.ts verify  <txhash>
 npx tsx src/cli.ts redteam [txhash]
@@ -39,6 +40,7 @@ src/
     inspect.ts    fee, deltas, change candidates, warnings - from bound data only
     proofs.ts     resolve proofs from a node (dev convenience)
   cli.ts
+  address.ts      bech32m addresses (short = bech32, full = bech32m)
   fixtures.ts     fixture loading
   profiles.ts     lock/type registry: names + verifiability
   hostile.test.ts 17 acceptance tests for the strict trust model

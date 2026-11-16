@@ -25,7 +25,7 @@ import { decodeSinceInfo } from "./since.js";
 import { txHash } from "./hash.js";
 import { hexToBytes, bytesToHex } from "./bytes.js";
 import { loadFixture, loadManifest } from "./fixtures.js";
-import { SECP_PROFILE } from "./profiles.js";
+import { SECP_PROFILE, MULTISIG_PROFILE } from "./profiles.js";
 import type { CellOutput } from "./ckb.js";
 
 const manifest = loadManifest();
@@ -235,6 +235,16 @@ describe("multisig", () => {
     tx.witnesses[i] = replaceLock(i, swapped);
     const results = verifyTx(tx, bindAll(tx, ms.proofs));
     assert.ok(results.some((r) => r.profile?.includes("multisig") && r.verdict === "verified"));
+  });
+
+  it("verifies a 2-of-3 legacy multisig spend accepted by a devnet", () => {
+    for (const e of manifest) {
+      const f = loadFixture(e.hash);
+      const results = verifyTx(f.tx, bindAll(f.tx, f.proofs));
+      const g = results.find((x) => x.profile === MULTISIG_PROFILE && x.verdict === "verified");
+      if (g && g.signers?.length === 2) return;
+    }
+    assert.fail("no verified legacy multisig spend in the corpus");
   });
 
   it("rejects a zeroed signature", () => {

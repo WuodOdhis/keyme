@@ -88,8 +88,8 @@ Six mainnet fixtures in `packages/psct-core/fixtures`. The offline test (`npm te
 re-binds, and re-verifies all of them with no RPC:
 
 ```
-fixtures              9
-groups verified       10
+fixtures              13
+groups verified       15
 refused: no profile   0
 refused: unknown lock 0
 failures              0
@@ -116,7 +116,7 @@ fixture that uses it and dumps readable strings from the deployment cell.
 
 ## 6. Hostile corpus, executable
 
-`src/hostile.test.ts` runs under `npm test` (41 tests). It is the acceptance criteria for D1:
+`src/hostile.test.ts` runs under `npm test` (42 tests). It is the acceptance criteria for D1:
 
 | Case | Expected |
 |---|---|
@@ -194,9 +194,20 @@ That fixture is 1.27 MB because the transaction is a contract deployment, so the
 a compiled binary. It is committed as-is; if repo size becomes a problem, the fix is fetch-on-demand
 with a pinned hash, not dropping the proof.
 
-Legacy multisig is implemented from the same source but has not yet appeared in the corpus. Stage 0.1
-needs one observed legacy spend before it can be called closed; until then it is "implemented, V2
-validated".
+### Legacy multisig: proven on a devnet
+
+No legacy spend exists in the recent public chain, so this one was closed against a local devnet
+instead of waiting for luck:
+
+- funded a **2-of-3 legacy multisig** from a devnet account,
+- built the spend with our own placeholder and assembly,
+- the node **accepted** it, and our verifier independently recovered both signers.
+
+Transaction `0x97fdd449…` is in the corpus as a devnet fixture. Consensus agreeing with our
+construction is stronger evidence than a random mainnet spend, because we chose the config and the
+threshold and the node still validated the witness.
+
+Legacy multisig is now closed. V2 remains closed against mainnet (Fiber 3-of-5).
 
 ## 9. Nervos DAO (stage 0.3)
 
@@ -241,8 +252,9 @@ Real mainnet withdraw `0xfdf1c26c9d4eae42e6e53d3ea6ad9490fc01e9d17ed1bcd09c9eef5
 - interest **393.99530246 CKB**, fee **936 shannons**
 - balloon: 4.6 KB fixture (two 208-byte headers, hex-encoded)
 
-Phase 1 is implemented from the same source but no prepare transaction appeared in 500 scanned
-blocks. Like legacy multisig, it is "implemented, not yet observed".
+Phase 1 was found without scanning: the withdraw's input cell was created by a prepare transaction, so
+the withdraw fixture's proof *is* a real phase-1 transaction. Imported as `0x621084fa…`: a deposit
+cell spent into a withdrawing cell, with the block-number check satisfied. DAO prepare is closed.
 
 ### Consequence for PSCT
 
@@ -311,11 +323,13 @@ during transfer (the "strip value from the NFT" pattern), and a melt.
 
 ### Status
 
-Implemented and unit-tested (parse, transfer, tampered data, capacity reduction, melt). **No chain
-fixture yet**: 1,200 mainnet blocks after the V2 deployment and 900 testnet blocks contained zero
-Spore outputs. The chain is quiet; the fixture is owed rather than invented. Tests use
-molecule-encoded SporeData built with our own codec, which validates parsing and comparison but not
-on-chain behaviour.
+Closed on **testnet**: `0x9beeba56…` is a Spore transfer (code hash `0xbbad…`, the testnet V1
+deployment) with 408 content bytes, identical input/output data, and a 955-shannon capacity
+reduction surfaced as an issue. Mainnet Spore is dormant: 1,200 blocks after the V2 deployment
+contained none.
+
+Testnet hashes for Spore/Cluster V1 and V2 are in the registry alongside mainnet's, because the same
+code is deployed at different addresses per network.
 
 ## 12. OmniLock, `since`, CLI (stage 0.6, 0.7, 0.9)
 
@@ -341,9 +355,16 @@ Bigints are encoded as decimal strings in JSON.
 
 ## 13. Next
 
-1. Profiles for the user-facing locks that still have none: OmniLock, the three multisig deployments,
-   JoyID, NostrLock. Multisig first — it is the actual treasury use case and it exercises the
-   placeholder/ordering rules.
-2. Collect labelled fixtures: DAO deposit, DAO withdraw (headers + `input_type`), xUDT transfer,
-   Spore create/transfer, 2-of-3 multisig.
-3. Then write `spec/psct-v0.md` as a description of what the verifier enforces.
+Stage 0 is closed. What remains is stage 1:
+
+1. Freeze the PSCT data model from what the verifier enforces.
+2. TS encoder/decoder, then an independent Rust implementation.
+3. Conformance vectors from this corpus, including the hostile cases.
+4. The `ckb-cli` interop projection.
+
+Still unmodelled, and deliberately refused: OmniLock signature schemes, JoyID, NostrLock, legacy
+multisig with `since`, Spore clusters/DIDs. They are named, not verified.
+
+Provenance of the corpus is mixed on purpose: mainnet for plain transfers, V2 multisig and both DAO
+phases; testnet for xUDT and Spore; devnet for the legacy multisig spend. The fixture file records
+`network` where it is not mainnet.
