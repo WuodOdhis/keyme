@@ -118,6 +118,11 @@ mainnet, 17 hostile tests, 6 fixtures). The rest of the surface is not.
 - No private key material in the coordinator, ever (checked by test).
 - A refused transaction is refused at the signer, not at broadcast.
 
+> **Amendment, 2026-11-16.** The DAO scenario is proven on a fast-epoch devnet, not testnet. Testnet
+> epochs are 1800 blocks and the DAO lock is 180 epochs; a testnet cycle is roughly 37 days, so it
+> cannot be a stage gate. Plain transfer and 2-of-3 payout remain testnet runs (docs/04 §5). The DAO
+> builder, signer refusal checks and epoch rounding are the same code paths on both networks.
+
 *(≈ 28 working days)*
 
 ---
@@ -233,7 +238,7 @@ is allowed between them.
 | 2026-11-16 | 2.2 software signer | **closed** — bind, display, refuse, sign, self-check |
 | 2026-11-16 | 2.3 round trip | **closed** — create → sign → finalize → broadcast (devnet + testnet) |
 | 2026-11-16 | 2.4 multisig rounds | **closed** — two signers, combine, finalize, broadcast (devnet) |
-| 2026-11-16 | 2.5 testnet scenarios | **closed** — testnet transfer; devnet DAO cycle and xUDT mint/transfer |
+| 2026-11-16 | 2.5 testnet scenarios | **closed with amendment** — testnet plain transfer and testnet 2-of-3 payout; DAO cycle on a 1-block-epoch devnet (180 testnet epochs ≈ 37 days) |
 | 2026-11-16 | 2.6 threat-model walk | **closed** — `docs/05-threat-model.md`; found and fixed the unknown-type gap |
 | 2026-11-16 | R3 account pairing | **closed** — BIP32 account xpub, change derived and certified; pairing tests + devnet run |
 

@@ -20,6 +20,7 @@ npm run demo             # coordinator + signer end-to-end on a devnet (needs `o
 npm run pairing-demo     # paired account: change derived and certified
 npm run dao-demo         # deposit -> prepare -> 180 epochs -> withdraw
 npm run xudt-demo        # mint and transfer an xUDT
+npm run testnet-multisig-demo  # faucet -> 2-of-3 -> two signers -> broadcast (testnet)
 npx tsx src/apps/testnet-demo.ts --key-file key.hex --from ckt1...   # same flow on testnet
 npx tsx src/cli.ts cli-export <file.psct.b64>   # ckb-cli tx file to stdout
 npx tsx src/cli.ts inspect <txhash>
@@ -86,6 +87,7 @@ src/
     xudt.ts         xUDT mint and transfer builders
     dao-demo.ts     full DAO cycle on a 1-block-epoch devnet
     xudt-demo.ts    xUDT mint + transfer on devnet
+    testnet-multisig-demo.ts  testnet 2-of-3 payout end to end
     pairing-demo.ts paired-account change certification on devnet
 fixtures/         transactions + proofs + manifest
 vectors/          signed PSCT conformance vectors (base64)

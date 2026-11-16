@@ -111,6 +111,33 @@ committed in 23084406
 
 Only the network dep table changed. No code was forked for testnet.
 
+### Testnet 2-of-3 multisig
+
+`npx tsx src/apps/testnet-multisig-demo.ts` generates fresh keys, claims the faucet (10,000 CKB),
+funds a legacy 2-of-3, signs from two independent signer instances, combines, and broadcasts:
+
+```
+funder    ckt1qyq8vr4l08ccfpeh3ckmuz50hcrqzu28sy3sadu8my
+signer1   ckt1qyqx8qhrhmuc6072adymkuv97rknqv25r53q0ncx7u
+signer2   ckt1qyqprgnjgat7hldaw9vpx2zz9u9jv5sc4nlss02v0z
+signer3   ckt1qyq950m3hrv9e7tgv7rky5fnr03zyncnzgns70a5ft
+multisig  ckt1qpw9q60tppt7l3j7r09qcp7lxnp3vcanvgha8pmvsa3jplykxn32sqv6cmcyr9k9x970fretj2ptsw4y0skze4c79620y
+
+fund   0x6cf91b6c7af9fa8c04a2d9e2126093b177ebab39ae182a3908737c584fdae8d5
+       committed in 23086198
+spend  0x0ea1b3755a6a9610d266a791f2adb0b8c484e6fa1fe203ccfccffedfddbd535f
+       expected 0x0ea1b375…535f
+       committed in 23086201
+```
+
+The spend was signed by the first two signers only; the third key was never used.
+
+### DAO on testnet
+
+Not run. Testnet epochs are 1800 blocks and the DAO lock is 180 epochs, so a testnet cycle is about
+37 days. The DAO cycle is recorded on a 1-block-epoch devnet instead (§7); the transaction builder and
+signer checks are the same code path, and the epoch rounding is unit-tested.
+
 ---
 
 ## 6. Paired account (R3)
