@@ -12,6 +12,8 @@
     "coordinator": "tsx src/apps/coordinator.ts",
     "signer": "tsx src/apps/signer.ts",
     "demo": "tsx src/apps/demo.ts",
+    "dao-demo": "tsx src/apps/dao-demo.ts",
+    "xudt-demo": "tsx src/apps/xudt-demo.ts",
     "selftest": "tsx src/scripts/selftest.ts",
     "collect": "tsx src/scripts/collect.ts",
     "redteam": "tsx src/scripts/redteam.ts",

@@ -16,6 +16,13 @@ import type { BoundCell } from "./psct/bind.js";
 export const XUDT_CODE_HASH = "0x50bd8d6680b8b9cf98b73f3c08faf8b2a21914311954118ad6609be6e78a1b95";
 export const SUDT_CODE_HASH = "0x5e7a36a77e68eecc013dfa2fe6a23f3b6c344b04005808694ae6dd45eea4cfd5";
 
+/** Mainnet, testnet (0x25c29d…) and devnet (0x1a1e…) deployments of the same token code. */
+const XUDT_HASHES = new Set([
+  XUDT_CODE_HASH,
+  "0x25c29dc317811a6f6f3985a7a9ebc4838bd388d19d0feeecf0bcd60f6c0975bb",
+  "0x1a1e4fef34f5982906f745b048fe7b1089647e82346074e0f32c2ece26cf6b1e",
+]);
+
 export type TokenKind = "xudt" | "sudt";
 
 /**
@@ -26,7 +33,7 @@ export function tokenKind(script: Script | null): TokenKind | null {
   if (!script) return null;
   if (script.hashType !== "type" && script.hashType !== "data1" && script.hashType !== "data") return null;
   const h = script.codeHash.toLowerCase();
-  if (h === XUDT_CODE_HASH) return "xudt";
+  if (XUDT_HASHES.has(h)) return "xudt";
   if (h === SUDT_CODE_HASH) return "sudt";
   return null;
 }

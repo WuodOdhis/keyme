@@ -145,6 +145,57 @@ BIP32's.
 
 ---
 
+## 7. Nervos DAO
+
+`npm run dao-demo` (needs 1-block epochs, see §9):
+
+```
+tip epoch 100
+deposit 0xe3b88299…  committed in 105
+prepare 0x5cafab59… (deposit block 105)  committed in 211
+waiting for epoch 285 …
+withdraw 502.69385601 CKB (interest 2.69386601), since epoch 285
+committed in 492
+```
+
+Three rules made this harder than it looks:
+
+1. **Phase 1 needs the deposit header in `header_deps`.** Without it the node rejects the prepare.
+2. **Phase 2 needs two headers.** The witness points at the deposit header (index 0), and the fee
+   calculator also requires the withdrawing cell's block header in `header_deps`. Missing the second
+   gives `PoolRejectedMalformedTransaction: InvalidOutPoint`, which sounds like a bad outpoint and is
+   actually a missing header.
+3. **The lock period rounds elapsed epochs up to a multiple of 180.** A deposit prepared at +181
+   epochs cannot withdraw until +360. `minimalSince` reproduces the contract's rounding and is
+   unit-tested.
+
+The signer refuses a DAO withdraw unless it can see both headers and recompute the interest.
+
+## 8. xUDT
+
+`npm run xudt-demo`:
+
+```
+mint     1000000 units, 1000 CKB cell   committed in 530
+transfer 400000 units, change 600000    committed in 533
+```
+
+Minting needed no special deployment: an xUDT is `owner_lock_script_hash ‖ flags`, and owner mode is
+true because the input lock hashes to the declared owner. The transfer spends one token cell and
+creates two (recipient + change) with the same type script.
+
+## 9. Devnet epochs
+
+The stock offckb devnet uses 1800-block epochs, which makes a 180-epoch DAO cycle impossible. For the
+DAO run the chain spec was edited to `genesis_epoch_length = 1`, `epoch_duration_target = 1`, the chain
+data removed, and the bundled `ckb` binary started directly (`ckb -C <dir> run`, `ckb -C <dir> miner`).
+`offckb clean` followed by `offckb node` restores the stock spec.
+
+This is a local test environment, not a product configuration; it is recorded so the numbers above can
+be reproduced.
+
+---
+
 ## 5. Known limits
 
 - **Devnet only so far.** The same code targets mainnet/testnet (network dep table in

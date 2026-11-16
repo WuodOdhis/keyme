@@ -19,7 +19,8 @@ import { occupiedCapacity } from "../capacity.js";
 import { decodeXpub, derivePublic } from "../bip32.js";
 import { lockForNode } from "../account.js";
 import { accountFromXpub, defaultPathPrefix } from "../pairing.js";
-import type { Script, Transaction } from "../ckb.js";
+import type { HashType, Script, Transaction } from "../ckb.js";
+import { fromRpcScript } from "../ckb.js";
 import { buildPsct, combinePsct, finalizePsct, psctFingerprint, psctTxHash, type Psct } from "../psct/container.js";
 import { readPsctFile, writePsctFile } from "../psct/file.js";
 import { resolveProofs } from "../psct/proofs.js";
@@ -68,11 +69,12 @@ export function parseCkb(value: string): bigint {
 interface LiveCell {
   outPoint: { txHash: string; index: number };
   capacity: bigint;
+  type: Script | null;
 }
 
 async function liveCells(rpc: Rpc, lock: Script): Promise<LiveCell[]> {
   const res = await rpc.call<{
-    objects: { out_point: { tx_hash: string; index: string }; output: { capacity: string } }[];
+    objects: { out_point: { tx_hash: string; index: string }; output: { capacity: string; type: { code_hash: string; hash_type: HashType; args: string } | null } }[];
   }>("get_cells", [
     {
       script: { code_hash: lock.codeHash, hash_type: lock.hashType, args: lock.args },
@@ -85,6 +87,7 @@ async function liveCells(rpc: Rpc, lock: Script): Promise<LiveCell[]> {
   return res.objects.map((o) => ({
     outPoint: { txHash: o.out_point.tx_hash, index: Number(BigInt(o.out_point.index)) },
     capacity: BigInt(o.output.capacity),
+    type: o.output.type ? fromRpcScript(o.output.type) : null,
   }));
 }
 
@@ -108,6 +111,46 @@ export interface TransferResult {
   fromAddress?: string;
 }
 
+export interface Source {
+  fromLock: Script;
+  changeLock: Script;
+  accountHint?: Psct["account"];
+  derivation?: string;
+}
+
+export function resolveSource(opts: {
+  from?: string;
+  account?: { xpub: string; index?: number };
+  network: Network;
+}): Source {
+  if (opts.account) {
+    const node = decodeXpub(opts.account.xpub);
+    const index = opts.account.index ?? 0;
+    const fromLock = lockForNode(derivePublic(node, `0/${index}`));
+    const changeLock = lockForNode(derivePublic(node, `1/${index}`));
+    const account = accountFromXpub(opts.account.xpub, defaultPathPrefix(opts.network.prefix));
+    if (opts.from) {
+      const given = decodeAddress(opts.from).script;
+      if (scriptHash(given) !== scriptHash(fromLock)) {
+        throw new Error("--from does not match the paired account's external address");
+      }
+    }
+    return {
+      fromLock,
+      changeLock,
+      accountHint: {
+        xpub: account.xpub,
+        fingerprint: account.fingerprint,
+        pathPrefix: account.pathPrefix,
+      },
+      derivation: `0/${index}`,
+    };
+  }
+  if (!opts.from) throw new Error("--from or --account is required");
+  const lock = decodeAddress(opts.from).script;
+  return { fromLock: lock, changeLock: lock };
+}
+
 export async function buildTransfer(opts: TransferOptions): Promise<TransferResult> {
   const network = networkByName(opts.network);
   const rpc = new Rpc(network.rpc);
@@ -121,26 +164,7 @@ export async function buildTransfer(opts: TransferOptions): Promise<TransferResu
   let accountHint: Psct["account"];
   let derivation: string | undefined;
 
-  if (opts.account) {
-    if (opts.multisig) throw new Error("account pairing applies to single-key accounts, not multisig");
-    const node = decodeXpub(opts.account.xpub);
-    const index = opts.account.index ?? 0;
-    fromLock = lockForNode(derivePublic(node, `0/${index}`));
-    changeLock = lockForNode(derivePublic(node, `1/${index}`));
-    derivation = `0/${index}`;
-    const account = accountFromXpub(opts.account.xpub, defaultPathPrefix(network.prefix));
-    accountHint = {
-      xpub: account.xpub,
-      fingerprint: account.fingerprint,
-      pathPrefix: account.pathPrefix,
-    };
-    if (opts.from) {
-      const given = decodeAddress(opts.from).script;
-      if (scriptHash(given) !== scriptHash(fromLock)) {
-        throw new Error("--from does not match the paired account's external address");
-      }
-    }
-  } else if (opts.multisig) {
+  if (opts.multisig) {
     const built = multisigLock(opts.multisig);
     fromLock = built.lock;
     changeLock = built.lock;
@@ -154,13 +178,16 @@ export async function buildTransfer(opts: TransferOptions): Promise<TransferResu
       }
     }
   } else {
-    if (!opts.from) throw new Error("--from is required");
-    fromLock = decodeAddress(opts.from).script;
-    changeLock = fromLock;
+    const src = resolveSource({ from: opts.from, account: opts.account, network });
+    fromLock = src.fromLock;
+    changeLock = src.changeLock;
+    accountHint = src.accountHint;
+    derivation = src.derivation;
   }
 
   const fee = opts.fee ?? 1000n;
-  const cells = await liveCells(rpc, fromLock);
+  // Plain CKB inputs only: spending a typed cell needs that type script's semantics.
+  const cells = (await liveCells(rpc, fromLock)).filter((c) => c.type === null);
   const fromAddress = encodeAddress(fromLock, network.prefix);
   if (cells.length === 0) throw new Error(`no live cells for ${fromAddress}`);
 
@@ -245,7 +272,9 @@ async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   const { args, positional } = parseArgs(rest);
   if (!cmd) {
-    console.error("usage: coordinator <transfer|combine|finalize|send> ...");
+    console.error(
+      "usage: coordinator <transfer|dao-deposit|dao-prepare|dao-withdraw|xudt-mint|xudt-transfer|combine|finalize|send> ...",
+    );
     process.exit(2);
   }
 
@@ -278,6 +307,113 @@ async function main() {
     if (result.multisigAddress) console.log(`multisig    ${result.multisigAddress}`);
     console.log(`inputs      ${result.tx.inputs.length}`);
     console.log(`amount      ${fmtCkb(amount)} CKB`);
+    console.log(`change      ${fmtCkb(result.change)} CKB`);
+    console.log(`fee         ${fmtCkb(result.fee)} CKB`);
+    console.log(`wrote       ${out}`);
+    return;
+  }
+
+  if (cmd === "dao-deposit") {
+    const { buildDaoDeposit } = await import("./dao.js");
+    const result = await buildDaoDeposit({
+      network: (args.network ?? "devnet") as NetworkName,
+      from: args.from,
+      amount: parseCkb(args.amount!),
+      fee: args.fee ? BigInt(args.fee) : undefined,
+      account: args.account ? { xpub: args.account, index: args.index ? Number(args.index) : 0 } : undefined,
+    });
+    const out = args.out ?? "dao-deposit.psct.b64";
+    writePsctFile(out, result.psct);
+    console.log(`psct        ${psctFingerprint(result.psct)}`);
+    console.log(`tx          ${psctTxHash(result.psct)}`);
+    console.log(`deposit     ${fmtCkb(parseCkb(args.amount!))} CKB`);
+    console.log(`change      ${fmtCkb(result.change)} CKB`);
+    console.log(`fee         ${fmtCkb(result.fee)} CKB`);
+    console.log(`wrote       ${out}`);
+    return;
+  }
+
+  if (cmd === "dao-prepare") {
+    const { buildDaoPrepare } = await import("./dao.js");
+    const result = await buildDaoPrepare({
+      network: (args.network ?? "devnet") as NetworkName,
+      from: args.from,
+      fee: args.fee ? BigInt(args.fee) : undefined,
+      account: args.account ? { xpub: args.account, index: args.index ? Number(args.index) : 0 } : undefined,
+    });
+    const out = args.out ?? "dao-prepare.psct.b64";
+    writePsctFile(out, result.psct);
+    console.log(`psct        ${psctFingerprint(result.psct)}`);
+    console.log(`tx          ${psctTxHash(result.psct)}`);
+    console.log(result.detail);
+    console.log(`fee         ${fmtCkb(result.fee)} CKB`);
+    console.log(`wrote       ${out}`);
+    return;
+  }
+
+  if (cmd === "dao-withdraw") {
+    const { buildDaoWithdraw } = await import("./dao.js");
+    const result = await buildDaoWithdraw({
+      network: (args.network ?? "devnet") as NetworkName,
+      from: args.from,
+      to: args.to!,
+      amount: args.amount ? parseCkb(args.amount) : undefined,
+      fee: args.fee ? BigInt(args.fee) : undefined,
+      account: args.account ? { xpub: args.account, index: args.index ? Number(args.index) : 0 } : undefined,
+    });
+    const out = args.out ?? "dao-withdraw.psct.b64";
+    writePsctFile(out, result.psct);
+    console.log(`psct        ${psctFingerprint(result.psct)}`);
+    console.log(`tx          ${psctTxHash(result.psct)}`);
+    console.log(result.detail);
+    console.log(`change      ${fmtCkb(result.change)} CKB`);
+    console.log(`fee         ${fmtCkb(result.fee)} CKB`);
+    console.log(`wrote       ${out}`);
+    return;
+  }
+
+  if (cmd === "xudt-mint") {
+    const { buildXudtMint } = await import("./xudt.js");
+    const result = await buildXudtMint({
+      network: (args.network ?? "devnet") as NetworkName,
+      from: args.from,
+      amount: BigInt(args.amount!),
+      capacity: args.capacity ? parseCkb(args.capacity) : undefined,
+      fee: args.fee ? BigInt(args.fee) : undefined,
+      account: args.account ? { xpub: args.account, index: args.index ? Number(args.index) : 0 } : undefined,
+    });
+    const out = args.out ?? "xudt-mint.psct.b64";
+    writePsctFile(out, result.psct);
+    console.log(`psct        ${psctFingerprint(result.psct)}`);
+    console.log(`tx          ${psctTxHash(result.psct)}`);
+    console.log(`type        ${result.typeScript.codeHash}:${result.typeScript.hashType}:${result.typeScript.args}`);
+    console.log(result.detail);
+    console.log(`change      ${fmtCkb(result.change)} CKB`);
+    console.log(`wrote       ${out}`);
+    return;
+  }
+
+  if (cmd === "xudt-transfer") {
+    const { buildXudtTransfer } = await import("./xudt.js");
+    const [codeHash, hashType, typeArgs] = (args.type ?? "").split(":");
+    if (!codeHash || !hashType || !typeArgs) {
+      throw new Error("--type must be <code_hash>:<hash_type>:<args>");
+    }
+    const result = await buildXudtTransfer({
+      network: (args.network ?? "devnet") as NetworkName,
+      from: args.from,
+      to: args.to!,
+      typeScript: { codeHash, hashType: hashType as "type" | "data1" | "data", args: typeArgs },
+      amount: BigInt(args.amount!),
+      outputCapacity: args.capacity ? parseCkb(args.capacity) : undefined,
+      fee: args.fee ? BigInt(args.fee) : undefined,
+      account: args.account ? { xpub: args.account, index: args.index ? Number(args.index) : 0 } : undefined,
+    });
+    const out = args.out ?? "xudt-transfer.psct.b64";
+    writePsctFile(out, result.psct);
+    console.log(`psct        ${psctFingerprint(result.psct)}`);
+    console.log(`tx          ${psctTxHash(result.psct)}`);
+    console.log(result.detail);
     console.log(`change      ${fmtCkb(result.change)} CKB`);
     console.log(`fee         ${fmtCkb(result.fee)} CKB`);
     console.log(`wrote       ${out}`);

@@ -57,7 +57,7 @@ Stages 0–2 complete on devnet and testnet.
   now refused by the signer.
 - Account pairing: the signer derives its own change from a paired xpub (BIP32) and refuses a
   "change" output that does not derive from it. Verified on devnet.
-- 66 tests across the verifier, container, interop and pairing, plus the Rust conformance run.
+- 68 tests across the verifier, container, interop and pairing, plus the Rust conformance run.
 
 The watch-only web UI is a wrapper over the same builder. Stage 3 (QR) is next.
 

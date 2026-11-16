@@ -55,6 +55,22 @@ function headersMap(psct: Psct): Map<string, string> {
   return new Map(psct.headers.map((h) => [bytesToHex(ckbHash(h)), bytesToHex(h)]));
 }
 
+/** The transaction as the signer will assemble it: templates carry the non-signature witness fields. */
+function reviewTransaction(tx: Transaction, psct: Psct): Transaction {
+  return {
+    ...tx,
+    witnesses: psct.witnessTemplates.map((t) =>
+      bytesToHex(
+        encodeWitnessArgs({
+          lock: null,
+          inputType: t.inputType ?? null,
+          outputType: t.outputType ?? null,
+        }),
+      ),
+    ),
+  };
+}
+
 export function describePsct(
   psct: Psct,
   account?: Account,
@@ -68,7 +84,7 @@ export function describePsct(
       blockHash: p.blockHash ? bytesToHex(p.blockHash) : undefined,
     })),
   );
-  const inspection = inspect(tx, bound, { headers: headersMap(psct) });
+  const inspection = inspect(reviewTransaction(tx, psct), bound, { headers: headersMap(psct) });
   const groups = groupsOf(psct, bound);
   const pairingWarnings: string[] = [];
   let pairing: ReturnType<typeof pairingFor> | undefined;
@@ -167,7 +183,7 @@ export function signPsct(psct: Psct, privkeyHex: string, account?: Account): Sig
       `unknown type script ${unknownType.codeHash.slice(0, 18)}…; refusing to sign an uncertifiable contract`,
     );
   }
-  const inspection = inspect(tx, bound, { headers: headersMap(psct) });
+  const inspection = inspect(reviewTransaction(tx, psct), bound, { headers: headersMap(psct) });
   const daoProblem = inspection.dao.find((d) => d.issues.length > 0);
   if (daoProblem) throw new Error(`DAO input ${daoProblem.input}: ${daoProblem.issues.join("; ")}`);
 

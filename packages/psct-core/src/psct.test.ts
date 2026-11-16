@@ -29,6 +29,9 @@ import { secp256k1 } from "@noble/curves/secp256k1";
 import { derivePrivate, encodeXpub, masterFromSeed, toPublic } from "./bip32.js";
 import { accountFromSeed, deriveAddresses, lockForNode } from "./account.js";
 import { pairingFor } from "./pairing.js";
+import { minimalSince } from "./apps/dao.js";
+import { xudtType } from "./apps/xudt.js";
+import { NETWORKS } from "./network.js";
 import { encodeAddress } from "./address.js";
 import { encodeTransaction } from "./ckb.js";
 import { ckbHash } from "./hash.js";
@@ -363,6 +366,33 @@ describe("account pairing", () => {
       () => pairingFor(psct, b.account, { inputLocks: [], outputLocks: [], fee: 0n }),
       /does not match/,
     );
+  });
+});
+
+describe("dao and token construction helpers", () => {
+  it("rounds the DAO lock period up to a 180-epoch boundary", () => {
+    // deposit at epoch 100.0/1000, prepare at 280.0/1000: elapsed 180 -> lock 180
+    assert.deepEqual(
+      minimalSince({ number: 100n, index: 0n, length: 1000n }, { number: 280n, index: 0n, length: 1000n }),
+      { number: 280n, index: 0n, length: 1000n },
+    );
+    // prepare at 281: elapsed 181 -> rounded to 360, so the withdraw must wait until 460
+    assert.deepEqual(
+      minimalSince({ number: 100n, index: 0n, length: 1000n }, { number: 281n, index: 0n, length: 1000n }),
+      { number: 460n, index: 0n, length: 1000n },
+    );
+  });
+
+  it("derives an xUDT type owned by the lock", () => {
+    const lock = {
+      codeHash: "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+      hashType: "type" as const,
+      args: "0x" + "11".repeat(20),
+    };
+    const type = xudtType(NETWORKS.devnet, lock);
+    assert.equal((type.args.length - 2) / 2, 36);
+    assert.equal(type.args.slice(2, 66), scriptHash(lock).slice(2));
+    assert.equal(type.args.slice(66), "00000000");
   });
 });
 
