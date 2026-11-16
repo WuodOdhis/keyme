@@ -29,6 +29,8 @@ import {
   type Psct,
 } from "../psct/container.js";
 import { readPsctFile, writePsctFile } from "../psct/file.js";
+import { accountFromXpub, defaultPathPrefix, pairingFor } from "../pairing.js";
+import type { Account } from "../account.js";
 
 interface Group {
   key: string;
@@ -53,7 +55,10 @@ function headersMap(psct: Psct): Map<string, string> {
   return new Map(psct.headers.map((h) => [bytesToHex(ckbHash(h)), bytesToHex(h)]));
 }
 
-export function describePsct(psct: Psct): { lines: string[]; warnings: string[] } {
+export function describePsct(
+  psct: Psct,
+  account?: Account,
+): { lines: string[]; warnings: string[] } {
   const tx = psctTransaction(psct);
   const bound = bindAll(
     tx,
@@ -65,11 +70,28 @@ export function describePsct(psct: Psct): { lines: string[]; warnings: string[] 
   );
   const inspection = inspect(tx, bound, { headers: headersMap(psct) });
   const groups = groupsOf(psct, bound);
+  const pairingWarnings: string[] = [];
+  let pairing: ReturnType<typeof pairingFor> | undefined;
+  if (account) {
+    try {
+      pairing = pairingFor(psct, account, {
+        inputLocks: bound.map((b) => b.cellOutput.lock),
+        outputLocks: tx.outputs.map((o) => o.lock),
+        fee: inspection.fee,
+      });
+      pairingWarnings.push(...pairing.warnings);
+    } catch (e) {
+      pairingWarnings.push(`pairing: ${(e as Error).message}`);
+    }
+  } else {
+    pairingWarnings.push("no paired account: change is not certified");
+  }
 
   const lines: string[] = [];
   lines.push(`network      ${psct.network}`);
   lines.push(`fingerprint  ${psctFingerprint(psct)}`);
   lines.push(`tx hash      ${psctTxHash(psct)}`);
+  if (account) lines.push(`account      ${bytesToHex(account.fingerprint)}`);
   lines.push(`inputs       ${tx.inputs.length}`);
   lines.push(`fee          ${inspection.feeCkb} CKB${inspection.interestKnown ? "" : " (lower bound)"}`);
 
@@ -82,8 +104,8 @@ export function describePsct(psct: Psct): { lines: string[]; warnings: string[] 
         return `${o.lock.codeHash.slice(0, 10)}…`;
       }
     })();
-    const role = psct.outputHints[i]?.role ?? "?";
-    lines.push(`  ${i}  ${fmtCkb(o.capacity).padStart(14)} CKB  ${role.padEnd(8)} ${addr}`);
+    const own = pairing?.changeOutputs.includes(i) ? "CHANGE" : "payment";
+    lines.push(`  ${i}  ${fmtCkb(o.capacity).padStart(14)} CKB  ${own.padEnd(8)} ${addr}`);
   });
 
   lines.push("groups");
@@ -93,7 +115,16 @@ export function describePsct(psct: Psct): { lines: string[]; warnings: string[] 
     lines.push(`  ${p.name.padEnd(28)} inputs=[${g.indices.join(",")}] sigs=${sigs}`);
   }
 
-  return { lines, warnings: inspection.warnings };
+  const baseWarnings = inspection.warnings.filter(
+    (w) =>
+      !(
+        pairing &&
+        pairing.changeOutputs.length > 0 &&
+        w.includes("no change output recognised")
+      ),
+  );
+
+  return { lines, warnings: [...baseWarnings, ...pairingWarnings] };
 }
 
 export interface SignResult {
@@ -102,7 +133,7 @@ export interface SignResult {
   signer: string;
 }
 
-export function signPsct(psct: Psct, privkeyHex: string): SignResult {
+export function signPsct(psct: Psct, privkeyHex: string, account?: Account): SignResult {
   const priv = hexToBytes(privkeyHex.startsWith("0x") ? privkeyHex : `0x${privkeyHex}`);
   if (priv.length !== 32) throw new Error("private key must be 32 bytes");
   const pubkey = secp256k1.getPublicKey(priv, true);
@@ -139,6 +170,16 @@ export function signPsct(psct: Psct, privkeyHex: string): SignResult {
   const inspection = inspect(tx, bound, { headers: headersMap(psct) });
   const daoProblem = inspection.dao.find((d) => d.issues.length > 0);
   if (daoProblem) throw new Error(`DAO input ${daoProblem.input}: ${daoProblem.issues.join("; ")}`);
+
+  // With a paired account, a claim that an output is change must be true.
+  if (account) {
+    const pairing = pairingFor(psct, account, {
+      inputLocks: bound.map((b) => b.cellOutput.lock),
+      outputLocks: tx.outputs.map((o) => o.lock),
+      fee: inspection.fee,
+    });
+    if (pairing.lies.length) throw new Error(pairing.lies.join("; "));
+  }
 
   // Witness layout: every group's first input carries its placeholder lock.
   const firstLock = new Map<number, Uint8Array>();
@@ -220,8 +261,20 @@ async function confirm(): Promise<boolean> {
   }
 }
 
-function parseArgs(argv: string[]) {
-  const args: Record<string, string> = {};
+function loadAccount(text: string, network: "ckb" | "ckt"): Account {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{")) {
+    const j = JSON.parse(trimmed) as { xpub: string; pathPrefix?: string; fingerprint?: string };
+    const base = accountFromXpub(j.xpub, j.pathPrefix ?? defaultPathPrefix(network));
+    return {
+      ...base,
+      fingerprint: j.fingerprint ? hexToBytes(j.fingerprint) : base.fingerprint,
+    };
+  }
+  return accountFromXpub(trimmed, defaultPathPrefix(network));
+}
+
+function parseArgs(argv: string[]) {  const args: Record<string, string> = {};
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
@@ -251,7 +304,10 @@ async function main() {
 
   if (cmd === "show" || cmd === "sign") {
     const psct = readPsctFile(positional[0]!);
-    const { lines, warnings } = describePsct(psct);
+    const account = args["account-file"]
+      ? loadAccount(readFileSync(args["account-file"], "utf8"), psct.network)
+      : undefined;
+    const { lines, warnings } = describePsct(psct, account);
     for (const l of lines) console.log(l);
     if (warnings.length) {
       console.log("warnings");
@@ -272,7 +328,7 @@ async function main() {
       }
     }
 
-    const result = signPsct(psct, key);
+    const result = signPsct(psct, key, account);
     console.log(`signer       ${result.signer}`);
 
     const out = args.out ?? "signed.psct.b64";

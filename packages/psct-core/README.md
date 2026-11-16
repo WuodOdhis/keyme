@@ -17,6 +17,7 @@ npm run selftest         # live: 25 mainnet txs, hash + signature
 npm run redteam          # the input-claim attack demo
 npm run devnet:multisig  # 2-of-3 legacy spend against a local devnet (needs `offckb node`)
 npm run demo             # coordinator + signer end-to-end on a devnet (needs `offckb node`)
+npm run pairing-demo     # paired account: change derived and certified
 npx tsx src/apps/testnet-demo.ts --key-file key.hex --from ckt1...   # same flow on testnet
 npx tsx src/cli.ts cli-export <file.psct.b64>   # ckb-cli tx file to stdout
 npx tsx src/cli.ts inspect <txhash>
@@ -38,6 +39,9 @@ src/
   sighash.ts      WitnessArgs, zeroed-lock placeholder, sighash-all message
   verify.ts       pubkey recovery, per-group verification
   cbor.ts         canonical CBOR for the PSCT envelope
+  bip32.ts        account derivation and xpub encoding (BIP32 vectors)
+  account.ts      paired account: external/change addresses
+  pairing.ts      change certification against the paired account
   address.ts      bech32m addresses (short = bech32, full = bech32m)
   profiles.ts     lock/type registry: names + verifiability
   rpc.ts          minimal JSON-RPC client
@@ -62,6 +66,7 @@ src/
     coordinator.ts  watch-only builder: live cells -> PSCT
     signer.ts       offline signer: bind, display, refuse, sign
     demo.ts         end-to-end devnet run (secp + multisig)
+    pairing-demo.ts paired-account change certification on devnet
 fixtures/         transactions + proofs + manifest
 vectors/          signed PSCT conformance vectors (base64)
 ```

@@ -55,7 +55,9 @@ Stages 0–2 complete on devnet and testnet.
   signed by two separate processes, and a testnet transfer committed at block 23,084,406.
 - Threat-model walk against D1; it found a gap (unknown type scripts were only warned about) which is
   now refused by the signer.
-- 62 tests across the verifier, container and interop, plus the Rust conformance run.
+- Account pairing: the signer derives its own change from a paired xpub (BIP32) and refuses a
+  "change" output that does not derive from it. Verified on devnet.
+- 66 tests across the verifier, container, interop and pairing, plus the Rust conformance run.
 
 The watch-only web UI is a wrapper over the same builder. Stage 3 (QR) is next.
 

@@ -26,6 +26,9 @@ import { toCkbCli, fromCkbCli } from "./ckbcli.js";
 import { parseCkb, multisigLock, LEGACY_MULTISIG } from "./apps/coordinator.js";
 import { signPsct } from "./apps/signer.js";
 import { secp256k1 } from "@noble/curves/secp256k1";
+import { derivePrivate, encodeXpub, masterFromSeed, toPublic } from "./bip32.js";
+import { accountFromSeed, deriveAddresses, lockForNode } from "./account.js";
+import { pairingFor } from "./pairing.js";
 import { encodeAddress } from "./address.js";
 import { encodeTransaction } from "./ckb.js";
 import { ckbHash } from "./hash.js";
@@ -284,6 +287,82 @@ describe("signer policy", () => {
     });
     const key = bytesToHex(secp256k1.utils.randomPrivateKey());
     assert.throws(() => signPsct(psct, key), /unknown type script/);
+  });
+});
+
+describe("account pairing", () => {
+  const seed = "0x000102030405060708090a0b0c0d0e0f";
+
+  it("matches the BIP32 test vector", () => {
+    const master = masterFromSeed(hexToBytes(seed));
+    assert.equal(
+      encodeXpub(toPublic(master)),
+      "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8",
+    );
+    const child = derivePrivate(master, "m/0'");
+    assert.equal(
+      encodeXpub(toPublic(child)),
+      "xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw",
+    );
+  });
+
+  it("derives a stable account and distinct addresses", () => {
+    const a = accountFromSeed(seed, "testnet");
+    const b = accountFromSeed(seed, "testnet");
+    assert.equal(a.account.xpub, b.account.xpub);
+    assert.equal(a.account.fingerprint.length, 4);
+    assert.match(a.account.pathPrefix, /^m\/44'\/1'\/0'$/);
+
+    const addrs = deriveAddresses(a.account.xpub, 3);
+    assert.equal(addrs.external.length, 3);
+    assert.equal(addrs.change.length, 3);
+    const hashes = new Set([...addrs.external, ...addrs.change].map((x) => scriptHash(x.script)));
+    assert.equal(hashes.size, 6);
+  });
+
+  it("accepts a real change output and rejects a claimed one that is not derived", () => {
+    const { account } = accountFromSeed(seed, "testnet");
+    const addrs = deriveAddresses(account.xpub, 2);
+    const other = accountFromSeed("0x" + "22".repeat(32), "testnet");
+    const otherAddrs = deriveAddresses(other.account.xpub, 2);
+    const psct = {
+      account: {
+        xpub: account.xpub,
+        fingerprint: account.fingerprint,
+        pathPrefix: account.pathPrefix,
+      },
+      outputHints: [{ role: "payment" }, { role: "change" }],
+    } as unknown as Psct;
+
+    const ok = pairingFor(psct, account, {
+      inputLocks: [addrs.external[0]!.script],
+      outputLocks: [otherAddrs.external[0]!.script, addrs.change[0]!.script],
+      fee: 1000n,
+    });
+    assert.deepEqual(ok.changeOutputs, [1]);
+    assert.equal(ok.lies.length, 0);
+    assert.equal(ok.ownInputs[0], true);
+
+    const liar = pairingFor(psct, account, {
+      inputLocks: [addrs.external[0]!.script],
+      outputLocks: [otherAddrs.external[0]!.script, otherAddrs.change[0]!.script],
+      fee: 1000n,
+    });
+    assert.equal(liar.changeOutputs.length, 0);
+    assert.match(liar.lies[0]!, /claimed as change/);
+  });
+
+  it("rejects a PSCT account that does not match the paired account", () => {
+    const a = accountFromSeed(seed, "testnet");
+    const b = accountFromSeed("0x" + "11".repeat(32), "testnet");
+    const psct = {
+      account: { xpub: a.account.xpub, fingerprint: a.account.fingerprint, pathPrefix: a.account.pathPrefix },
+      outputHints: [],
+    } as unknown as Psct;
+    assert.throws(
+      () => pairingFor(psct, b.account, { inputLocks: [], outputLocks: [], fee: 0n }),
+      /does not match/,
+    );
   });
 });
 

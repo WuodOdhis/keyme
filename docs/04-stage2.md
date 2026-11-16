@@ -113,6 +113,38 @@ Only the network dep table changed. No code was forked for testnet.
 
 ---
 
+## 6. Paired account (R3)
+
+The signer can be given an account xpub at setup. It then derives its own external and change locks
+(BIP32, `m/44'/309'/0'` mainnet, `m/44'/1'/0'` testnet, `/0/i` external, `/1/i` change) and checks:
+
+- the PSCT's account xpub and fingerprint match the paired account;
+- an output claiming to be change actually derives from the account;
+- an output that derives from the account is change even if the file calls it a payment.
+
+`npm run pairing-demo` on devnet:
+
+```
+account 0x61db34b5
+external ckt1qyqgwkx638mu742azjfg9dg6atr5whyufk4sl4p2wf
+change   ckt1qyqfrejz0zpfx0r7qfja8pr53zj5k9cqcumqxhsqsg
+coordinator 0xa6d9e3af…0ae9
+outputs
+  0             100 CKB  payment  ckt1qyqfve0x…
+  1       399.99999 CKB  CHANGE   ckt1qyqfrejz0…
+signer 0x8758da89… groups=1
+spend: committed in 26837
+```
+
+The change output is on the change chain, not the input's own lock. Before pairing, the signer would
+have had to guess; now it derives.
+
+The xpub uses the Bitcoin version bytes (`xpub`/`tpub`) because CKB has no xpub standard of its own.
+The derivation and address rules are CKB's (`m/44'/coin'/0'`, blake160 locks); the encoding is
+BIP32's.
+
+---
+
 ## 5. Known limits
 
 - **Devnet only so far.** The same code targets mainnet/testnet (network dep table in

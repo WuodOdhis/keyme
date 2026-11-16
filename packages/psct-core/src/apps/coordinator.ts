@@ -16,6 +16,9 @@ import { bytesToHex, fmtCkb, hexToBytes } from "../bytes.js";
 import { decodeAddress, encodeAddress } from "../address.js";
 import { blake160, scriptHash } from "../hash.js";
 import { occupiedCapacity } from "../capacity.js";
+import { decodeXpub, derivePublic } from "../bip32.js";
+import { lockForNode } from "../account.js";
+import { accountFromXpub, defaultPathPrefix } from "../pairing.js";
 import type { Script, Transaction } from "../ckb.js";
 import { buildPsct, combinePsct, finalizePsct, psctFingerprint, psctTxHash, type Psct } from "../psct/container.js";
 import { readPsctFile, writePsctFile } from "../psct/file.js";
@@ -92,6 +95,8 @@ export interface TransferOptions {
   amount: bigint;
   fee?: bigint;
   multisig?: MultisigSpec;
+  /** Paired account; when present the coordinator derives from/change instead of using an address. */
+  account?: { xpub: string; index?: number };
 }
 
 export interface TransferResult {
@@ -100,6 +105,7 @@ export interface TransferResult {
   fee: bigint;
   change: bigint;
   multisigAddress?: string;
+  fromAddress?: string;
 }
 
 export async function buildTransfer(opts: TransferOptions): Promise<TransferResult> {
@@ -108,13 +114,36 @@ export async function buildTransfer(opts: TransferOptions): Promise<TransferResu
   const toLock = decodeAddress(opts.to).script;
 
   let fromLock: Script;
+  let changeLock: Script;
   let dep = network.secpDep;
   let lockTemplate: Uint8Array | undefined;
   let multisigAddress: string | undefined;
+  let accountHint: Psct["account"];
+  let derivation: string | undefined;
 
-  if (opts.multisig) {
+  if (opts.account) {
+    if (opts.multisig) throw new Error("account pairing applies to single-key accounts, not multisig");
+    const node = decodeXpub(opts.account.xpub);
+    const index = opts.account.index ?? 0;
+    fromLock = lockForNode(derivePublic(node, `0/${index}`));
+    changeLock = lockForNode(derivePublic(node, `1/${index}`));
+    derivation = `0/${index}`;
+    const account = accountFromXpub(opts.account.xpub, defaultPathPrefix(network.prefix));
+    accountHint = {
+      xpub: account.xpub,
+      fingerprint: account.fingerprint,
+      pathPrefix: account.pathPrefix,
+    };
+    if (opts.from) {
+      const given = decodeAddress(opts.from).script;
+      if (scriptHash(given) !== scriptHash(fromLock)) {
+        throw new Error("--from does not match the paired account's external address");
+      }
+    }
+  } else if (opts.multisig) {
     const built = multisigLock(opts.multisig);
     fromLock = built.lock;
+    changeLock = built.lock;
     lockTemplate = built.lockTemplate;
     dep = opts.multisig.version === "v2" ? network.multisigV2Dep : network.multisigDep;
     multisigAddress = encodeAddress(fromLock, network.prefix, "full");
@@ -127,11 +156,13 @@ export async function buildTransfer(opts: TransferOptions): Promise<TransferResu
   } else {
     if (!opts.from) throw new Error("--from is required");
     fromLock = decodeAddress(opts.from).script;
+    changeLock = fromLock;
   }
 
   const fee = opts.fee ?? 1000n;
   const cells = await liveCells(rpc, fromLock);
-  if (cells.length === 0) throw new Error(`no live cells for ${opts.from ?? multisigAddress}`);
+  const fromAddress = encodeAddress(fromLock, network.prefix);
+  if (cells.length === 0) throw new Error(`no live cells for ${fromAddress}`);
 
   const selected: LiveCell[] = [];
   let total = 0n;
@@ -152,7 +183,7 @@ export async function buildTransfer(opts: TransferOptions): Promise<TransferResu
   const outputs = [{ capacity: opts.amount, lock: toLock, type: null }];
   const outputsData = ["0x"];
   if (change > 0n) {
-    outputs.push({ capacity: change, lock: fromLock, type: null });
+    outputs.push({ capacity: change, lock: changeLock, type: null });
     outputsData.push("0x");
   }
 
@@ -180,11 +211,13 @@ export async function buildTransfer(opts: TransferOptions): Promise<TransferResu
     network: network.prefix,
     proofs: proofs.map((p) => ({ prevTx: p.prevTx, index: p.index, blockHash: p.blockHash })),
     headers: new Map(),
+    account: accountHint,
+    inputHints: selected.map(() => ({ derivation })),
     outputHints: outputs.map((_, i) => ({ role: i === 0 ? "payment" : "change" })),
   });
   if (lockTemplate) psct.witnessTemplates[0] = { lockTemplate };
 
-  return { psct, tx, fee, change, multisigAddress };
+  return { psct, tx, fee, change, multisigAddress, fromAddress };
 }
 
 function parseArgs(argv: string[]) {
@@ -235,11 +268,13 @@ async function main() {
       amount,
       fee: args.fee ? BigInt(args.fee) : undefined,
       multisig,
+      account: args.account ? { xpub: args.account, index: args.index ? Number(args.index) : 0 } : undefined,
     });
     const out = args.out ?? "tx.psct.b64";
     writePsctFile(out, result.psct);
     console.log(`psct        ${psctFingerprint(result.psct)}`);
     console.log(`tx          ${psctTxHash(result.psct)}`);
+    if (result.fromAddress) console.log(`from        ${result.fromAddress}`);
     if (result.multisigAddress) console.log(`multisig    ${result.multisigAddress}`);
     console.log(`inputs      ${result.tx.inputs.length}`);
     console.log(`amount      ${fmtCkb(amount)} CKB`);

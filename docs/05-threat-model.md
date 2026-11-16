@@ -32,8 +32,9 @@ The coordinator never receives a private key; the signer never talks to a node.
 6. DAO maturity and interest, when the required headers are present.
 7. That every lock has a modelled signing profile.
 8. That every type script is one it can name.
+9. That every output claimed as change derives from its paired account (xpub), not from the file.
 
-If any of 1, 7 or 8 fails, it refuses the whole transaction — not the group, not a warning.
+If any of 1, 7, 8 or 9 fails, it refuses the whole transaction — not the group, not a warning.
 
 ---
 
@@ -62,11 +63,12 @@ If any of 1, 7 or 8 fails, it refuses the whole transaction — not the group, n
 | 19 | DAO withdraw without its header | signer refuses before prompting | code + DAO tests |
 | 20 | Lying DAO interest | computed from bound headers | DAO test (fee reconciles) |
 | 21 | Token amount lie | xUDT data parsed; non-16-byte data warned | xUDT tests |
-| 22 | Fake change output | signer derives the lock; roles are hints | code; see residual R3 |
+| 22 | Fake change output | signer derives change from the paired account | pairing tests, pairing demo |
 | 23 | Replay a signature on another tx | `tx_hash` differs | hostile tests |
 | 24 | Coordinator rewrites the sigs map | finalize verifies every group | container tests |
 | 25 | ckb-cli export drops witness slots | placeholders preserve the layout | interop test |
 | 26 | Lossy export of DAO/xUDT witness data | export throws | interop test |
+| 27 | PSCT account swapped for another xpub | xpub + fingerprint must match the paired account | pairing tests |
 
 ---
 
@@ -78,11 +80,15 @@ that the network rejects. Consequence: failed broadcast, not loss of funds.
 **R2 — Header canonicity.** Headers are hash-bound to `header_deps`/`block_hash`, but not proven to be
 on the best chain. A lying coordinator can cause a rejected transaction. Same class as R1.
 
-**R3 — Account pairing.** The signer identifies change by comparing output locks with the *input*
-locks. A malicious coordinator could omit a change output entirely; the fee display would show the
-difference, and the signer warns above 1 CKB, but "this output is your change" is not proven against
-a paired xpub. **Open.** The fix is the D1 account pairing (xpub + fingerprint + path prefix) and a
-signer-side derivation check.
+**R3 — Account pairing. Fixed (2026-11-16).** The signer is configured with an account xpub before
+it sees a PSCT. It derives a 20-address look-ahead window on both chains, requires the PSCT account's
+xpub and fingerprint to match, and refuses an output that claims to be change but does not derive from
+the account. A transaction with no output back to the account still signs, but the fee (the whole
+difference) is displayed; that is a deliberate choice, not a blind spot.
+
+**R3a — Look-ahead window.** Only 20 addresses per chain are derived. An output to index 20 that the
+coordinator calls change is treated as a payment (and refused if it claims change). Widen or scan on
+demand; the format carries derivation hints, but the signer does not trust them.
 
 **R4 — Code-dep identity.** `type`-hash dependencies rely on the signer's registry; dep cells are not
 carried. For `data`/`data1`/`data2` the `code_hash` is the code. A `type`-hash dep outside the
@@ -113,14 +119,16 @@ then the "offline" claim is procedural, not enforced.
 | F4 Fee treated `inputs − outputs`, wrong for DAO interest | fixed earlier |
 | F5 Sighash padded missing witnesses instead of stopping | fixed earlier |
 | F6 ckb-cli export dropped witness slots | fixed earlier |
+| **F7** Change ownership was a heuristic (compare with input locks) | **fixed** — paired account and derived change, with tests |
 
 ---
 
 ## 6. Test coverage
 
-`npm test` runs 62 tests: 42 in the verifier/hostile suite, 20 in the container/interop/signer suite.
-Thirteen fixtures cover mainnet, testnet and devnet. Three PSCT vectors are checked against an
-independent Rust implementation. Two end-to-end flows are committed on devnet and one on testnet.
+`npm test` runs 66 tests: 42 in the verifier/hostile suite, 24 in the container/interop/signer/pairing
+suite. Thirteen fixtures cover mainnet, testnet and devnet. Three PSCT vectors are checked against an
+independent Rust implementation. End-to-end flows are committed on devnet, testnet, and a paired-account
+devnet run.
 
 The matrix above is the acceptance list: every row has a test or an observed run, except the residual
 risks, which are stated rather than covered.
