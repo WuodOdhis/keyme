@@ -117,9 +117,7 @@ export function inspect(
 
   bound.forEach((b, i) => {
     const p = classifyLock(b.cellOutput.lock);
-    if (p.kind === "infrastructure") {
-      warnings.push(`input ${i}: lock "${p.name}" — infrastructure, not a user lock`);
-    } else if (p.kind === "unknown") {
+    if (p.kind === "unknown") {
       warnings.push(`input ${i}: lock unknown (${b.cellOutput.lock.codeHash.slice(0, 18)}…)`);
     } else if (p.profile === null) {
       warnings.push(`input ${i}: lock "${p.name}" — no verification profile`);

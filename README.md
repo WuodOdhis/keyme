@@ -28,7 +28,7 @@ Phase 0 (inspector + verifier) is running against mainnet:
 
 - `tx_hash` reproduces the node on 25/25 transactions.
 - Signatures verify on 25/25 secp256k1 lock groups.
-- 6 offline-verifiable fixtures, including an 11-input transaction.
+- 6 offline-verifiable mainnet fixtures.
 - The input-claim attack (fee inflation without touching the signed bytes) is reproduced and
   rejected by the binding check.
 

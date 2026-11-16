@@ -20,7 +20,7 @@ import { loadFixture, loadManifest } from "./fixtures.js";
 import type { CellOutput } from "./ckb.js";
 
 const manifest = loadManifest();
-const plain = loadFixture(manifest.find((m) => m.inputs === 1)!.hash);
+const plain = loadFixture([...manifest].sort((a, b) => a.inputs - b.inputs)[0]!.hash);
 
 // A multi-input fixture made only of supported user locks (no L2 witnesses).
 const multi = (() => {
@@ -28,7 +28,7 @@ const multi = (() => {
     const f = loadFixture(e.hash);
     if (f.tx.inputs.length < 3) continue;
     const r = verifyTx(f.tx, bindAll(f.tx, f.proofs));
-    if (r.some((x) => x.verdict === "verified") && r.every((x) => x.verdict !== "infrastructure")) {
+    if (r.some((x) => x.verdict === "verified")) {
       return f;
     }
   }
@@ -54,8 +54,10 @@ describe("binding", () => {
   });
 
   it("rejects a previous transaction that does not hash to the outpoint", () => {
+    const bad = clone(plain.proofs[0]!.prevTx);
+    bad.outputs[0] = { ...bad.outputs[0]!, capacity: bad.outputs[0]!.capacity + 1n };
     const proofs = clone(plain.proofs);
-    proofs[0] = { prevTx: multi.proofs[0]!.prevTx, index: 0 };
+    proofs[0] = { prevTx: bad, index: plain.proofs[0]!.index };
     assert.throws(() => bindAll(plain.tx, proofs), /hash mismatch/);
   });
 
@@ -141,18 +143,6 @@ describe("signed bytes", () => {
 });
 
 describe("lock policy", () => {
-  it("refuses L2/infrastructure locks by name", () => {
-    for (const m of manifest) {
-      const f = loadFixture(m.hash);
-      const results = verifyTx(f.tx, bindAll(f.tx, f.proofs));
-      const infra = results.filter((r) => r.verdict === "infrastructure");
-      if (infra.length > 0) {
-        assert.match(infra[0]!.name, /Godwoken/);
-        return;
-      }
-    }
-  });
-
   it("refuses an unknown lock instead of guessing", () => {
     const bound = bindAll(plain.tx, plain.proofs).map((b) => ({
       ...b,

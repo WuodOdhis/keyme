@@ -56,7 +56,6 @@ function main() {
   const manifest: ManifestEntry[] = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
   let failures = 0;
   let groupsVerified = 0;
-  let refusedInfra = 0;
   let noProfile = 0;
   const unknownLocks = new Map<string, number>();
 
@@ -95,9 +94,6 @@ function main() {
         case "verified":
           groupsVerified++;
           break;
-        case "infrastructure":
-          refusedInfra++;
-          break;
         case "no-profile":
           noProfile++;
           break;
@@ -123,7 +119,6 @@ function main() {
   console.log("");
   console.log(`fixtures              ${manifest.length}`);
   console.log(`groups verified       ${groupsVerified}`);
-  console.log(`refused: L2/infra     ${refusedInfra}`);
   console.log(`refused: no profile   ${noProfile}`);
   console.log(`refused: unknown lock ${[...unknownLocks.values()].reduce((a, b) => a + b, 0)}`);
   for (const [hash, n] of [...unknownLocks.entries()].sort((a, b) => b[1] - a[1])) {

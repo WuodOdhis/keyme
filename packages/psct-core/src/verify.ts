@@ -36,7 +36,6 @@ export function verifySighashAll(
 export type GroupVerdict =
   | "verified"
   | "no-profile"
-  | "infrastructure"
   | "unknown-lock"
   | "no-signature"
   | "bad-signature";
@@ -81,10 +80,6 @@ export function verifyTx(
       profile: p.profile,
     };
 
-    if (p.kind === "infrastructure") {
-      results.push({ ...base, verdict: "infrastructure", reason: p.note ?? "L2 lock" });
-      continue;
-    }
     if (p.kind === "unknown") {
       results.push({ ...base, verdict: "unknown-lock", reason: "not in the registry" });
       continue;

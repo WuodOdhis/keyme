@@ -84,42 +84,39 @@ naive inspector would have reported "token moved, delta 0" — a lie. It now say
 
 ## 5. Fixtures
 
-Six mainnet fixtures in `packages/psct-core/fixtures`, including an 11-input transaction. The
-offline test (`npm test`) re-hashes, re-binds, and re-verifies all of them with no RPC:
+Six mainnet fixtures in `packages/psct-core/fixtures`. The offline test (`npm test`) re-hashes,
+re-binds, and re-verifies all of them with no RPC:
 
 ```
 fixtures              6
 groups verified       6
-groups w/o profile    4
-failures              0
-```
-
-The four unprofiled lock code hashes turned out to be **Godwoken L2 infrastructure locks**, not user
-wallets. All four appear in a single fixture transaction (`0x10c4c285…`), and their deployment cells
-contain `gw-utils/src/cells/lock_cells.rs`, `custodian-lock/src/entry.rs` and `stake-lock/src/entry.rs`.
-
-Consequences:
-
-- They are now registered as `kind: "infrastructure"` and refused by name, not as "unknown".
-- The fixture was misleading: four "unknown locks" were really one L2 settlement transaction.
-- `collect.ts` now skips infrastructure and unknown locks so future fixtures represent signable
-  payments. The Godwoken fixture is kept deliberately as a refusal case.
-
-```
-fixtures              6
-groups verified       6
-refused: L2/infra     4
 refused: no profile   0
 refused: unknown lock 0
 failures              0
 ```
 
-Use `npx tsx src/scripts/identify-lock.ts <codeHash>` to repeat this for any future unknown lock: it
-finds a fixture that uses it and dumps readable strings from the deployment cell.
+### Corpus quality gate
+
+The first collection pass was misleading: one transaction contributed four "unknown locks" that were
+not user wallets at all, but custom locks belonging to an L2 settlement system. Naming them was a dead
+end — they are outside this project's threat surface, and the project has no reason to model them.
+
+What changed:
+
+- `collect.ts` now skips any lock that is not in the registry, so fixtures represent signable
+  payments rather than L2 bookkeeping.
+- The registry only carries scripts this project actually cares about: the standard user locks and the
+  type scripts we decode. Anything else is `unknown` and refused. That is the correct outcome either
+  way, so there is no need to enumerate the world.
+- Lesson kept: **input count is not a proxy for kind.** Fixture selection must filter by lock class,
+  not by shape. The same mistake had already made a test flip the wrong witness.
+
+Use `npx tsx src/scripts/identify-lock.ts <codeHash>` to inspect any future unknown lock: it finds a
+fixture that uses it and dumps readable strings from the deployment cell.
 
 ## 6. Hostile corpus, executable
 
-`src/hostile.test.ts` runs under `npm test` (18 tests). It is the acceptance criteria for D1:
+`src/hostile.test.ts` runs under `npm test` (17 tests). It is the acceptance criteria for D1:
 
 | Case | Expected |
 |---|---|
@@ -132,7 +129,6 @@ finds a fixture that uses it and dumps readable strings from the deployment cell
 | reordered inputs | nothing verifies |
 | perturbed signature bytes | signature fails |
 | malformed signature | verdict, never an exception |
-| Godwoken L2 lock | refused, named |
 | unknown code hash | refused |
 | known lock with no profile (OmniLock) | refused, named |
 

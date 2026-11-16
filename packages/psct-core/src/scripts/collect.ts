@@ -56,13 +56,10 @@ async function main() {
         continue;
       }
 
-      // Keep the corpus representative: L2/infrastructure and unknown locks are refusal cases,
-      // not payment fixtures. Collect them deliberately when testing refusal paths.
-      const kinds = bound.map((b) => classifyLock(b.cellOutput.lock));
-      const infra = kinds.find((k) => k.kind === "infrastructure");
-      const unknown = kinds.find((k) => k.kind === "unknown");
-      if (infra || unknown) {
-        console.warn(`skip ${hash}: ${(infra ?? unknown)!.name}`);
+      // Keep the corpus representative: unknown locks are refusal cases, not payment fixtures.
+      const unknown = bound.map((b) => classifyLock(b.cellOutput.lock)).find((k) => k.kind === "unknown");
+      if (unknown) {
+        console.warn(`skip ${hash}: ${unknown.name}`);
         continue;
       }
       const fee = bound.reduce((n, b) => n + b.cellOutput.capacity, 0n) - tx.outputs.reduce((n, o) => n + o.capacity, 0n);

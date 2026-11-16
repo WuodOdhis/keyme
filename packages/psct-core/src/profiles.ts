@@ -13,7 +13,7 @@
 
 import type { Script } from "./ckb.js";
 
-export type LockKind = "signable" | "infrastructure" | "unknown";
+export type LockKind = "signable" | "unknown";
 
 export interface LockProfile {
   name: string;
@@ -81,32 +81,6 @@ const REGISTRY: Record<string, LockProfile> = {
     kind: "signable",
     profile: null,
     note: "permissionless lock: third parties can take capacity",
-  },
-
-  // --- L2 / infrastructure: a signer has no business authorising these
-  "0xede199745fbd9e9f339f1dd2e92a586020d111432bfb81a6c2b12ddc9856f0ba": {
-    name: "Godwoken lock (L2)",
-    kind: "infrastructure",
-    profile: null,
-    note: "gw-utils custodian/stake lock family",
-  },
-  "0x1c04df09d9adede5bfc40ff1a39a3a17fc8e29f15c56f16b7e48680c600ee5ac": {
-    name: "Godwoken lock (L2)",
-    kind: "infrastructure",
-    profile: null,
-    note: "gw-utils custodian/stake lock family",
-  },
-  "0xff022d5512d3d5fd9614cc6ead110925d7a39e8916b6b1c8d5967846e4d32733": {
-    name: "Godwoken lock (L2)",
-    kind: "infrastructure",
-    profile: null,
-    note: "gw-utils custodian/stake lock family",
-  },
-  "0x45c112df97daece27c4afa02b24b15f64403bdfd45ab2e0e88c9fb2a24796b1d": {
-    name: "Godwoken lock (L2)",
-    kind: "infrastructure",
-    profile: null,
-    note: "gw-utils custodian/stake lock family",
   },
 };
 
