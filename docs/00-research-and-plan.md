@@ -465,8 +465,12 @@ rather than annotating it.
 
 ### Phase 5 — Hardware
 
-Pick the no-radio board, build a reproducible image, strip network drivers, 3D case, assembly guide. Export
-`psct-core` to the device or reimplement the small verifier in Rust.
+**Decision D2: Raspberry Pi is out for v1.** Pick a radio-less board (RISC-V class), build a reproducible
+image, strip network drivers, 3D case, assembly guide. Export `psct-core` to the device or reimplement the
+small verifier in Rust.
+
+Stages 0–2 are built in this repository and frozen in `docs/02-implementation-plan.md`. Hardware and QR
+start after that plan completes, under a separate DAO-funded scope (D3).
 
 ---
 
@@ -488,15 +492,14 @@ Pick the no-radio board, build a reproducible image, strip network drivers, 3D c
 
 ## 9. Open questions for us to settle
 
-- **Signer platform for v1.** D1 removes the laptop from the shipping path (radios + network stack), but it
-  stays as the reference implementation. Hardware target: Pi Zero 1.3 (no radio, SeedSigner-proven, supply
-  risk) vs a radio-less RISC-V board (better supply, less ecosystem). Decide before Phase 5, not before
-  Phase 3.
+- **Signer platform for v1.** Decided (D2): no Raspberry Pi. Hardware is deferred until after stage 2 and
+  must be radio-less; the software signer is the reference implementation. Board selection happens under
+  the DAO-funded scope.
 - **Unknown-contract downgrade.** D1 forbids silent acceptance. Do we offer the explicit "sign for unknown
   code hash anyway" screen at all in v0, or defer it until real users hit the wall? Recommend: defer;
   measure how often it is actually needed on mainnet.
 - **Multisig scope.** Legacy `multisig` only, or also the 2024 deployment? The 2024 one has tool gaps
-  (ckb-cli/Neuron cannot sign it), which is both a risk and a differentiator.
+  (ckb-cli/Neuron cannot sign it), which is both a risk and a differentiator. Stage 0 covers legacy first.
 - **Name.** `psct` (your term) is fine and unclaimed. Avoid `ckb-psbt` — it invites "why isn't it BIP-174"
   and it is *not* BIP-174. `crypto-psct` for the UR type.
 - **Do we adopt CoBuild `WitnessLayout`** as the witness shape, or stay on `WitnessArgs`? CoBuild is where
