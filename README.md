@@ -41,10 +41,10 @@ Stage 0 is in progress:
   3-of-5 multisig spend and a DAO withdrawal whose interest and fee reconcile.
 - The input-claim attack (fee inflation without touching the signed bytes) is reproduced and
   rejected by the binding check.
-- 30 hostile tests; malformed input produces verdicts, never crashes.
+- 35 hostile tests; malformed input produces verdicts, never crashes.
 
-Covered: single-key secp256k1, multisig legacy + V2, Nervos DAO withdraw, xUDT. Not yet: DAO prepare,
-Spore, OmniLock. See stage 0 in the plan.
+Covered: single-key secp256k1, multisig legacy + V2, Nervos DAO withdraw, xUDT, Spore (logic only —
+no chain fixture yet). Not yet: DAO prepare, OmniLock auth display, `since` display. See stage 0.
 
 ```bash
 cd packages/psct-core

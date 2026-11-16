@@ -13,6 +13,7 @@
 
 import type { Script } from "./ckb.js";
 import { tokenKind } from "./xudt.js";
+import { sporeKind } from "./spore.js";
 
 export type LockKind = "signable" | "unknown";
 
@@ -106,6 +107,10 @@ export function classifyType(script: Script): string {
   const kind = tokenKind(script);
   if (kind === "xudt") return "xUDT";
   if (kind === "sudt") return "sUDT";
+  const spore = sporeKind(script);
+  if (spore === "spore") return "Spore";
+  if (spore === "cluster") return "Spore Cluster";
+  if (spore === "did") return "Spore DID";
   return TYPE_REGISTRY[key(script.codeHash, script.hashType)] ?? "unknown type";
 }
 

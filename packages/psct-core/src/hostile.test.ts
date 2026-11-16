@@ -18,6 +18,8 @@ import { decodeMultisigLock } from "./multisig.js";
 import { occupiedBytes } from "./capacity.js";
 import { DAO_CODE_HASH, classifyDaoCell } from "./dao.js";
 import { decodeXudtArgs, ownerMode, tokenAmount, tokenKind } from "./xudt.js";
+import { SPORE_V2_CODE_HASH, inspectSpore, parseSporeData } from "./spore.js";
+import { bytesVec, option, table } from "./molecule.js";
 import { txHash } from "./hash.js";
 import { hexToBytes, bytesToHex } from "./bytes.js";
 import { loadFixture, loadManifest } from "./fixtures.js";
@@ -340,6 +342,71 @@ describe("xudt", () => {
 
   it("refuses data shorter than 16 bytes", () => {
     assert.equal(tokenAmount("0x" + "00".repeat(15)), null);
+  });
+});
+
+describe("spore", () => {
+  const enc = new TextEncoder();
+  const sporeData = (contentType: string, content: string, clusterId?: string) =>
+    "0x" +
+    Buffer.from(
+      table(
+        bytesVec(enc.encode(contentType)),
+        bytesVec(enc.encode(content)),
+        option(clusterId ? bytesVec(hexToBytes(clusterId)) : null),
+      ),
+    ).toString("hex");
+
+  const id = "0x" + "ab".repeat(32);
+  const type = { codeHash: SPORE_V2_CODE_HASH, hashType: "data1" as const, args: id };
+  const lock = {
+    codeHash: "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+    hashType: "type" as const,
+    args: "0x" + "11".repeat(20),
+  };
+  const otherLock = { ...lock, args: "0x" + "22".repeat(20) };
+  const data = sporeData("image/png", "hello-spore");
+  const cell = (cap: bigint, l = lock) => ({ capacity: cap, lock: l, type });
+
+  it("parses SporeData", () => {
+    const d = parseSporeData(data)!;
+    assert.equal(d.contentType, "image/png");
+    assert.equal(d.contentBytes, 11);
+    assert.equal(d.clusterId, null);
+  });
+
+  it("detects a transfer and reports the new lock", () => {
+    const tx = {
+      outputs: [cell(100_000_000_000n, otherLock)],
+      outputsData: [data],
+    } as any;
+    const bound = [{ cellOutput: cell(100_000_000_000n), data, outPointTxHash: "0x", index: 0 }] as any;
+    const [f] = inspectSpore(tx, bound);
+    assert.equal(f!.kind, "transfer");
+    assert.equal(f!.issues.length, 0);
+    assert.equal(f!.toLock!.args, otherLock.args);
+  });
+
+  it("rejects a modified SporeData", () => {
+    const tx = { outputs: [cell(100_000_000_000n)], outputsData: [sporeData("image/png", "tampered")] } as any;
+    const bound = [{ cellOutput: cell(100_000_000_000n), data, outPointTxHash: "0x", index: 0 }] as any;
+    const [f] = inspectSpore(tx, bound);
+    assert.ok(f!.issues.some((i) => /changed during transfer/.test(i)));
+  });
+
+  it("flags a capacity reduction during transfer", () => {
+    const tx = { outputs: [cell(70_000_000_000n)], outputsData: [data] } as any;
+    const bound = [{ cellOutput: cell(100_000_000_000n), data, outPointTxHash: "0x", index: 0 }] as any;
+    const [f] = inspectSpore(tx, bound);
+    assert.ok(f!.issues.some((i) => /capacity reduced by 300 CKB/.test(i)));
+  });
+
+  it("detects a melt when no output carries the id", () => {
+    const tx = { outputs: [], outputsData: [] } as any;
+    const bound = [{ cellOutput: cell(100_000_000_000n), data, outPointTxHash: "0x", index: 0 }] as any;
+    const [f] = inspectSpore(tx, bound);
+    assert.equal(f!.kind, "melt");
+    assert.equal(f!.capacityBefore, 100_000_000_000n);
   });
 });
 

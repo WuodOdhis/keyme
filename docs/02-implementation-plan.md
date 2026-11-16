@@ -215,6 +215,7 @@ is allowed between them.
 | 2026-11-16 | 0.3 DAO withdraw | closed — verified against a mainnet withdraw, interest and fee reconciled |
 | 2026-11-16 | 0.3 DAO prepare (phase 1) | implementation done from source; awaiting an observed prepare transaction |
 | 2026-11-16 | 0.4 xUDT | closed on testnet evidence (amount, extension data, owner-mode flags); mainnet fixture still owed |
+| 2026-11-16 | 0.5 Spore | implemented + unit-tested; no chain fixture found (1,200 mainnet / 900 testnet blocks) |
 
 ---
 

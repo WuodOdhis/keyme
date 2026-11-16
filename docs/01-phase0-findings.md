@@ -116,7 +116,7 @@ fixture that uses it and dumps readable strings from the deployment cell.
 
 ## 6. Hostile corpus, executable
 
-`src/hostile.test.ts` runs under `npm test` (30 tests). It is the acceptance criteria for D1:
+`src/hostile.test.ts` runs under `npm test` (35 tests). It is the acceptance criteria for D1:
 
 | Case | Expected |
 |---|---|
@@ -139,6 +139,8 @@ fixture that uses it and dumps readable strings from the deployment cell.
 | xUDT: owner mode via input type script | satisfied (flags 0x80000000) |
 | xUDT: amount with extension data | first 16 bytes only |
 | witness list shorter than inputs | message stops, no zero padding |
+| Spore: transfer / tampered data / melt | detected, data must be identical |
+| Spore: capacity reduction | flagged |
 | unknown code hash | refused |
 | known lock with no profile (OmniLock) | refused, named |
 
@@ -289,7 +291,33 @@ script, fee 40,410 shannons. It is a testnet fixture because no xUDT output appe
 mainnet blocks (only five type scripts are active there at the moment). The rules are
 network-independent, but a mainnet xUDT fixture is still owed.
 
-## 11. Next
+## 11. Spore (stage 0.5)
+
+Cell data is a molecule `SporeData`:
+
+```
+table SporeData { content_type: Bytes, content: Bytes, cluster_id: BytesOpt }
+```
+
+Type args = 32-byte spore id. Rules from `spore-contract/contracts/spore/src/entry.rs`:
+
+- **Transfer**: input and output `SporeData` must be **byte-identical** ("no field was modified").
+  The lock may change; the capacity may change.
+- **Melt**: no output carries the id; capacity returns to the lock owner.
+- **Mint**: an output id with no matching input.
+
+The signer surfaces three things a user cannot see otherwise: the new lock, a capacity reduction
+during transfer (the "strip value from the NFT" pattern), and a melt.
+
+### Status
+
+Implemented and unit-tested (parse, transfer, tampered data, capacity reduction, melt). **No chain
+fixture yet**: 1,200 mainnet blocks after the V2 deployment and 900 testnet blocks contained zero
+Spore outputs. The chain is quiet; the fixture is owed rather than invented. Tests use
+molecule-encoded SporeData built with our own codec, which validates parsing and comparison but not
+on-chain behaviour.
+
+## 12. Next
 
 1. Profiles for the user-facing locks that still have none: OmniLock, the three multisig deployments,
    JoyID, NostrLock. Multisig first — it is the actual treasury use case and it exercises the

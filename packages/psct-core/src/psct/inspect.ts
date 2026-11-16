@@ -7,6 +7,7 @@ import { txHash } from "../hash.js";
 import { classifyLock, classifyType } from "../profiles.js";
 import { inspectDao, isDaoType, type DaoFinding } from "../dao.js";
 import { summarizeTokens, tokenKind, type TokenSummary } from "../xudt.js";
+import { inspectSpore, sporeKind, type SporeFinding } from "../spore.js";
 import type { BoundCell } from "./bind.js";
 
 export interface Delta {
@@ -34,6 +35,7 @@ export interface Inspection {
   /** False when a withdraw is present but its headers are missing, so interest is unknown. */
   interestKnown: boolean;
   tokens: TokenSummary[];
+  spore: SporeFinding[];
 }
 
 export interface InspectOptions {
@@ -76,6 +78,7 @@ export function inspect(
   const warnings: string[] = [];
 
   const tokens = summarizeTokens(tx, bound);
+  const spore = inspectSpore(tx, bound);
 
   bound.forEach((b, i) => {
     const c = b.cellOutput;
@@ -85,7 +88,7 @@ export function inspect(
     }
     bump("ckb-locked", "ckb", "input", c.capacity);
     if (isDaoType(c.type)) return; // DAO data is a block number, not an amount
-    if (!tokenKind(c.type)) {
+    if (!tokenKind(c.type) && !sporeKind(c.type)) {
       const len = (b.data.length - 2) / 2;
       warnings.push(`input ${i}: typed cell with ${len}-byte data — semantics unknown`);
     }
@@ -97,7 +100,7 @@ export function inspect(
     }
     bump("ckb-locked", "ckb", "output", o.capacity);
     if (isDaoType(o.type)) return;
-    if (!tokenKind(o.type)) {
+    if (!tokenKind(o.type) && !sporeKind(o.type)) {
       const len = ((tx.outputsData[i] ?? "0x").length - 2) / 2;
       warnings.push(`output ${i}: typed cell with ${len}-byte data — semantics unknown`);
     }
@@ -150,6 +153,20 @@ export function inspect(
     }
   }
 
+  for (const f of spore) {
+    const label = `spore ${f.id.slice(0, 12)}…`;
+    for (const issue of f.issues) warnings.push(`${label} (${f.kind}): ${issue}`);
+    if (f.kind === "melt") {
+      warnings.push(`${label}: NFT melted, ${fmtCkb(f.capacityBefore ?? 0n)} CKB returned`);
+    } else if (f.kind === "mint") {
+      warnings.push(`${label}: new NFT (${f.data?.contentBytes ?? "?"} content bytes)`);
+    } else if (f.kind === "transfer") {
+      warnings.push(
+        `${label}: transferred, capacity ${fmtCkb(f.capacityBefore ?? 0n)} -> ${fmtCkb(f.capacityAfter ?? 0n)} CKB`,
+      );
+    }
+  }
+
   bound.forEach((b, i) => {
     const p = classifyLock(b.cellOutput.lock);
     if (p.kind === "unknown") {
@@ -178,6 +195,7 @@ export function inspect(
     daoInterest,
     interestKnown,
     tokens,
+    spore,
   };
 }
 
