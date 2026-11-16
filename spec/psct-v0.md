@@ -242,7 +242,30 @@ A second implementation is conformant when it decodes each file, reproduces `tx_
 
 ---
 
-## 11. Versioning
+## 11. ckb-cli interop
+
+`toCkbCli(psct)` emits ckb-cli's `tx` file shape:
+
+```json
+{ "transaction": { ... }, "multisig_configs": { ... }, "signatures": { ... } }
+```
+
+- `transaction` is the full transaction with **placeholder witnesses**. The count matters: it is part
+  of the signing message, so an export that empties the array is not round-trippable.
+- `multisig_configs` is keyed by the 20-byte lock arg and holds `lock_code_hash`, the signers as
+  short secp256k1 addresses, `require_first_n` and `threshold`.
+- `signatures` is keyed by the lock arg and holds 65-byte signatures.
+
+Limits, enforced rather than papered over:
+
+- ckb-cli files carry **no input cells**. Import therefore requires proofs; without them there is
+  nothing to bind.
+- There is no field for witness type data. Exporting a PSCT whose templates carry `input_type` or
+  `output_type` (DAO, xUDT) throws instead of dropping it.
+
+`psct cli-export <file.psct.b64>` writes the ckb-cli file to stdout.
+
+## 12. Versioning
 
 - The version byte and `psct` field must agree.
 - New optional fields do not bump the version; unknown keys must be preserved.

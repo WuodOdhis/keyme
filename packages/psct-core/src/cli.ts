@@ -10,13 +10,16 @@
  * Everything is computed from bound cells. Nothing is read from a label.
  */
 
-import { fmtCkb } from "./bytes.js";
+import { fmtCkb, hexToBytes } from "./bytes.js";
+import { readFileSync } from "node:fs";
 import { MAINNET, TESTNET, type Rpc } from "./rpc.js";
 import { resolveHeaders, resolveProofs } from "./psct/proofs.js";
 import { bindAll } from "./psct/bind.js";
 import { inspect } from "./psct/inspect.js";
 import { verifyTx } from "./verify.js";
 import { describeEpoch } from "./dao.js";
+import { decodePsct } from "./psct/container.js";
+import { toCkbCli } from "./ckbcli.js";
 
 function usage(): never {
   console.error("usage: psct <inspect|verify|redteam> [txhash] [--rpc mainnet|testnet] [--json]");
@@ -46,6 +49,17 @@ async function main() {
     const txHash = hash ?? "0x00b6d14f5567f2076ed3f975783b0cafda297a74795cef44803cfc265197c7cb";
     const tx = await rpc.tx(txHash);
     console.log(await sigHashExample(tx, txHash, rpc));
+    return;
+  }
+
+  if (cmd === "cli-export") {
+    const file = positional[0];
+    if (!file) usage();
+    const text = readFileSync(file, "utf8").trim();
+    const bytes = text.startsWith("0x")
+      ? hexToBytes(text)
+      : Uint8Array.from(Buffer.from(text, "base64"));
+    console.log(json(toCkbCli(decodePsct(bytes))));
     return;
   }
 

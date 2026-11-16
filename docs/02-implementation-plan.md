@@ -228,7 +228,7 @@ is allowed between them.
 | 2026-11-16 | 1.5 conformance vectors | 3 signed vectors: secp, multisig, DAO withdraw |
 | 2026-11-16 | 1.4 Rust implementation | **closed** — byte-identical `tx_hash` and `full_tx_hash`, all groups verified |
 | 2026-11-16 | 1.7 spec | written from what the verifier enforces |
-| — | 1.6 `ckb-cli` interop | pending |
+| 2026-11-16 | 1.6 `ckb-cli` interop | **closed** — export/import round-trip; lossy exports refused |
 
 ---
 

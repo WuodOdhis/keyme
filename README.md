@@ -48,7 +48,10 @@ Stage 0 complete; stage 1 in progress.
 - TypeScript codec and 3 signed conformance vectors (secp, multisig, DAO).
 - Independent Rust implementation reproduces `tx_hash` and `full_tx_hash` byte-for-byte on every
   vector and verifies every signer.
-- 56 tests across the verifier and the container, plus the Rust conformance run.
+- `ckb-cli` interop: export/import round-trips secp and multisig; lossy exports are refused.
+- 59 tests across the verifier, the container and interop, plus the Rust conformance run.
+
+Stage 1 is complete. Next: stage 2, the watch-only coordinator and the offline software signer.
 
 Not modelled (and refused): OmniLock auth schemes, JoyID, NostrLock, Spore clusters/DIDs.
 

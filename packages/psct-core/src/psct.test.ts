@@ -22,6 +22,9 @@ import {
   type Psct,
 } from "./psct/container.js";
 import { encodeCbor, decodeCbor } from "./cbor.js";
+import { toCkbCli, fromCkbCli } from "./ckbcli.js";
+import { encodeTransaction } from "./ckb.js";
+import { ckbHash } from "./hash.js";
 import { bindAll } from "./psct/bind.js";
 import { witnessLock } from "./sighash.js";
 import { bytesEqual, bytesToHex, hexToBytes } from "./bytes.js";
@@ -157,6 +160,70 @@ describe("combine", () => {
     const a = psctFor(loadFixture(manifest[0]!.hash));
     const b = psctFor(loadFixture(manifest[1]!.hash));
     assert.throws(() => combinePsct(a, b), /different transactions/);
+  });
+});
+
+describe("ckb-cli interop", () => {
+  const fullHash = (tx: Parameters<typeof encodeTransaction>[0]) =>
+    bytesToHex(ckbHash(encodeTransaction(tx)));
+
+  it("exports a secp PSCT in ckb-cli shape and imports it back", () => {
+    const f = manifest
+      .map((m) => loadFixture(m.hash))
+      .find((x) => {
+        const r = bindAll(x.tx, x.proofs);
+        return r.every((b) => classifyLock(b.cellOutput.lock).profile === SECP_PROFILE);
+      })!;
+    const p = psctFor(f);
+    extractSignatures(p, f);
+
+    const cli = toCkbCli(p);
+    assert.equal(
+      (cli.transaction as { witnesses: unknown[] }).witnesses.length,
+      f.tx.witnesses.length,
+      "placeholder witnesses preserve the layout",
+    );
+    assert.equal(Object.keys(cli.multisig_configs).length, 0);
+    assert.ok(Object.keys(cli.signatures).length > 0);
+
+    const back = fromCkbCli(cli, { proofs: f.proofs, network: "ckb" });
+    const a = finalizePsct(p);
+    const b = finalizePsct(back);
+    assert.equal(fullHash(b), fullHash(a));
+  });
+
+  it("exports a multisig as config + addresses and re-imports it", () => {
+    const f = manifest
+      .map((m) => loadFixture(m.hash))
+      .find((x) =>
+        bindAll(x.tx, x.proofs).some((b) => {
+          const profile = classifyLock(b.cellOutput.lock).profile;
+          return profile === MULTISIG_PROFILE || profile === MULTISIG_V2_PROFILE;
+        }),
+      )!;
+    const p = psctFor(f);
+    extractSignatures(p, f);
+
+    const cli = toCkbCli(p);
+    const configs = Object.values(cli.multisig_configs);
+    assert.equal(configs.length, 1);
+    assert.equal(configs[0]!.threshold, 3);
+    assert.equal(configs[0]!.sighash_addresses.length, 5);
+    for (const a of configs[0]!.sighash_addresses) assert.match(a, /^ck(b|t)1/);
+
+    const back = fromCkbCli(cli, { proofs: f.proofs, network: "ckb" });
+    const a = finalizePsct(p);
+    const b = finalizePsct(back);
+    assert.equal(fullHash(b), fullHash(a));
+  });
+
+  it("refuses a lossy export when a witness template carries type data", () => {
+    const dao = manifest
+      .map((m) => loadFixture(m.hash))
+      .find((x) => x.tx.headerDeps.length > 0)!;
+    const p = psctFor(dao);
+    extractSignatures(p, dao);
+    assert.throws(() => toCkbCli(p), /lossy export/);
   });
 });
 

@@ -16,6 +16,7 @@ npm test                 # hostile corpus (17 tests) + offline fixture verificat
 npm run selftest         # live: 25 mainnet txs, hash + signature
 npm run redteam          # the input-claim attack demo
 npm run devnet:multisig  # 2-of-3 legacy spend against a local devnet (needs `offckb node`)
+npx tsx src/cli.ts cli-export <file.psct.b64>   # ckb-cli tx file to stdout
 npx tsx src/cli.ts inspect <txhash>
 npx tsx src/cli.ts verify  <txhash>
 npx tsx src/cli.ts redteam [txhash]
