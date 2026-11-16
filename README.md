@@ -41,7 +41,7 @@ Stage 0 is in progress:
   3-of-5 multisig spend and a DAO withdrawal whose interest and fee reconcile.
 - The input-claim attack (fee inflation without touching the signed bytes) is reproduced and
   rejected by the binding check.
-- 35 hostile tests; malformed input produces verdicts, never crashes.
+- 41 hostile tests; malformed input produces verdicts, never crashes.
 
 Covered: single-key secp256k1, multisig legacy + V2, Nervos DAO withdraw, xUDT, Spore (logic only —
 no chain fixture yet). Not yet: DAO prepare, OmniLock auth display, `since` display. See stage 0.
@@ -52,4 +52,15 @@ npm install
 npm test                                          # hostile suite + offline fixtures
 npm run redteam                                   # the attack demo
 npx tsx src/cli.ts inspect <txhash>
+npx tsx src/cli.ts inspect <txhash> --json
+npx tsx src/cli.ts verify <txhash> --json
 ```
+
+Exit codes: `0` ok · `1` refused/failed · `2` usage. JSON encodes bigints as decimal strings.
+
+## Docs
+
+- `docs/00-research-and-plan.md` — research, trust model D1
+- `docs/01-phase0-findings.md` — what was proven, and what broke
+- `docs/02-implementation-plan.md` — frozen scope for stages 0–2
+- `docs/03-portability.md` — the rules a Rust implementation must reproduce

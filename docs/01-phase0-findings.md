@@ -116,7 +116,7 @@ fixture that uses it and dumps readable strings from the deployment cell.
 
 ## 6. Hostile corpus, executable
 
-`src/hostile.test.ts` runs under `npm test` (35 tests). It is the acceptance criteria for D1:
+`src/hostile.test.ts` runs under `npm test` (41 tests). It is the acceptance criteria for D1:
 
 | Case | Expected |
 |---|---|
@@ -317,7 +317,29 @@ Spore outputs. The chain is quiet; the fixture is owed rather than invented. Tes
 molecule-encoded SporeData built with our own codec, which validates parsing and comparison but not
 on-chain behaviour.
 
-## 12. Next
+## 12. OmniLock, `since`, CLI (stage 0.6, 0.7, 0.9)
+
+**OmniLock** args start with a 21-byte auth: a scheme byte plus a 20-byte identity. The scheme decides
+how a signature would be checked (CKB secp256k1, Ethereum, EOS, Tron, Bitcoin, Dogecoin, CKB multisig,
+lock-script delegation, preimage). The optional mode flags add administrator, anyone-can-pay, time-lock
+and supply checks. We describe the scheme and the modes, and still refuse to sign: the auth schemes
+are not modelled and some of them are not ours to verify.
+
+**`since`** is decoded into absolute/relative block, epoch (with fraction) or timestamp. Every non-zero
+input `since` is shown; a relative lock adds an explicit warning, because it can make the transaction
+unspendable until it matures.
+
+**CLI** now has `--json` for both `inspect` and `verify`, and a stable contract:
+
+| exit | meaning |
+|---|---|
+| 0 | inspected OK / every group verified |
+| 1 | refused, failed, or any group not verified |
+| 2 | usage error |
+
+Bigints are encoded as decimal strings in JSON.
+
+## 13. Next
 
 1. Profiles for the user-facing locks that still have none: OmniLock, the three multisig deployments,
    JoyID, NostrLock. Multisig first — it is the actual treasury use case and it exercises the

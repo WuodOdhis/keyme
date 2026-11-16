@@ -20,6 +20,8 @@ import { DAO_CODE_HASH, classifyDaoCell } from "./dao.js";
 import { decodeXudtArgs, ownerMode, tokenAmount, tokenKind } from "./xudt.js";
 import { SPORE_V2_CODE_HASH, inspectSpore, parseSporeData } from "./spore.js";
 import { bytesVec, option, table } from "./molecule.js";
+import { decodeOmnilockArgs } from "./omnilock.js";
+import { decodeSinceInfo } from "./since.js";
 import { txHash } from "./hash.js";
 import { hexToBytes, bytesToHex } from "./bytes.js";
 import { loadFixture, loadManifest } from "./fixtures.js";
@@ -407,6 +409,47 @@ describe("spore", () => {
     const [f] = inspectSpore(tx, bound);
     assert.equal(f!.kind, "melt");
     assert.equal(f!.capacityBefore, 100_000_000_000n);
+  });
+});
+
+describe("lock descriptors", () => {
+  it("describes OmniLock auth schemes and modes", () => {
+    const eth = "0x" + "01" + "22".repeat(20) + "03";
+    const info = decodeOmnilockArgs(eth)!;
+    assert.equal(info.authFlag, 0x01);
+    assert.equal(info.authName, "Ethereum");
+    assert.deepEqual(info.modes, ["administrator", "anyone-can-pay"]);
+  });
+
+  it("rejects truncated OmniLock args", () => {
+    assert.equal(decodeOmnilockArgs("0x" + "01".repeat(10)), null);
+  });
+});
+
+describe("since", () => {
+  it("decodes absolute block", () => {
+    const s = decodeSinceInfo(12345n);
+    assert.equal(s.kind, "absolute-block");
+    assert.equal(s.text, "block 12345");
+  });
+
+  it("decodes absolute epoch with fraction", () => {
+    const value = 15125n | (568n << 24n) | (1702n << 40n);
+    const s = decodeSinceInfo(0x20n << 56n | value);
+    assert.equal(s.kind, "absolute-epoch");
+    assert.equal(s.text, "epoch 15125.568/1702");
+  });
+
+  it("decodes relative timestamp", () => {
+    const s = decodeSinceInfo(0xc0n << 56n | 3600n * 1000n);
+    assert.equal(s.kind, "relative-timestamp");
+    assert.equal(s.text, "3600s after");
+    assert.equal(s.relative, true);
+  });
+
+  it("treats zero as no constraint", () => {
+    assert.equal(decodeSinceInfo(0n).kind, "unknown");
+    assert.equal(decodeSinceInfo(0n).text, "none");
   });
 });
 

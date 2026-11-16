@@ -2,11 +2,12 @@
 /**
  * psct CLI (v0)
  *
- *   psct inspect <txhash> [--rpc mainnet|testnet]
- *   psct verify  <txhash> [--rpc mainnet|testnet]
+ *   psct inspect <txhash> [--rpc mainnet|testnet] [--json]
+ *   psct verify  <txhash> [--rpc mainnet|testnet] [--json]
  *   psct redteam [txhash]
  *
- * Everything is computed from bound cell data. Nothing is read from a label.
+ * Exit codes: 0 ok · 1 refused or failed · 2 usage error.
+ * Everything is computed from bound cells. Nothing is read from a label.
  */
 
 import { fmtCkb } from "./bytes.js";
@@ -18,30 +19,33 @@ import { verifyTx } from "./verify.js";
 import { describeEpoch } from "./dao.js";
 
 function usage(): never {
-  console.error("usage: psct <inspect|verify|redteam> [txhash] [--rpc mainnet|testnet]");
+  console.error("usage: psct <inspect|verify|redteam> [txhash] [--rpc mainnet|testnet] [--json]");
   process.exit(2);
 }
 
-function pickRpc(argv: string[]): Rpc {
-  const i = argv.indexOf("--rpc");
-  if (i < 0) return MAINNET;
-  const v = argv[i + 1];
-  return v === "testnet" ? TESTNET : MAINNET;
+function parseArgs(argv: string[]) {
+  const flags = new Set(argv.filter((a) => a.startsWith("--")));
+  const rpcIndex = argv.indexOf("--rpc");
+  const rpc = rpcIndex >= 0 && argv[rpcIndex + 1] === "testnet" ? TESTNET : MAINNET;
+  const positional = argv.filter((a, i) => !a.startsWith("--") && argv[i - 1] !== "--rpc");
+  return { flags, rpc, positional };
 }
+
+const json = (v: unknown) =>
+  JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x), 2);
 
 async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   if (!cmd) usage();
-  const rpc = pickRpc(rest);
-  const positional = rest.filter((a, i) => a !== "--rpc" && rest[i - 1] !== "--rpc");
+  const { flags, rpc, positional } = parseArgs(rest);
+  const wantJson = flags.has("--json");
   const hash = positional[0];
 
   if (cmd === "redteam") {
     const { sigHashExample } = await import("./scripts/redteam-helpers.js");
-    const txHashArg =
-      hash ?? "0x00b6d14f5567f2076ed3f975783b0cafda297a74795cef44803cfc265197c7cb";
-    const tx = await rpc.tx(txHashArg);
-    console.log(await sigHashExample(tx, txHashArg, rpc));
+    const txHash = hash ?? "0x00b6d14f5567f2076ed3f975783b0cafda297a74795cef44803cfc265197c7cb";
+    const tx = await rpc.tx(txHash);
+    console.log(await sigHashExample(tx, txHash, rpc));
     return;
   }
 
@@ -53,6 +57,10 @@ async function main() {
   if (cmd === "inspect") {
     const headers = await resolveHeaders(tx, proofs, rpc);
     const r = inspect(tx, bound, { headers });
+    if (wantJson) {
+      console.log(json(r));
+      return;
+    }
     console.log(`tx            ${r.txHash}`);
     console.log(`inputs        ${tx.inputs.length}`);
     console.log(`outputs       ${tx.outputs.length}`);
@@ -74,6 +82,23 @@ async function main() {
         for (const issue of f.issues) console.log(`    issue: ${issue}`);
       }
     }
+    if (r.tokens.length) {
+      console.log("");
+      console.log("tokens");
+      for (const t of r.tokens) {
+        console.log(
+          `  ${t.kind} ${t.typeHash.slice(0, 12)}… in=${t.input} out=${t.output} delta=${t.delta}` +
+            (t.ownerMode ? " (owner mode)" : ""),
+        );
+      }
+    }
+    if (r.spore.length) {
+      console.log("");
+      console.log("spore");
+      for (const f of r.spore) {
+        console.log(`  ${f.kind} ${f.id.slice(0, 12)}… content=${f.data?.contentBytes ?? "?"} bytes`);
+      }
+    }
     console.log("");
     console.log("deltas (output - input, per script)");
     for (const d of r.deltas) {
@@ -90,16 +115,18 @@ async function main() {
 
   if (cmd === "verify") {
     const results = verifyTx(tx, bound);
-    let bad = 0;
-    for (const g of results) {
-      if (g.verdict !== "verified") bad++;
-      console.log(
-        `${g.verdict === "verified" ? "ok  " : "FAIL"} ${g.verdict.padEnd(14)} ${g.name}` +
-          ` inputs=[${g.inputs.join(",")}]` +
-          (g.reason ? `  ${g.reason}` : ""),
-      );
+    if (wantJson) {
+      console.log(json(results));
+    } else {
+      for (const g of results) {
+        console.log(
+          `${g.verdict === "verified" ? "ok  " : "FAIL"} ${g.verdict.padEnd(14)} ${g.name}` +
+            ` inputs=[${g.inputs.join(",")}]` +
+            (g.reason ? `  ${g.reason}` : ""),
+        );
+      }
     }
-    if (bad) process.exitCode = 1;
+    if (results.some((g) => g.verdict !== "verified")) process.exitCode = 1;
     return;
   }
 

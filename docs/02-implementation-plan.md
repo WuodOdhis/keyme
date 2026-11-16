@@ -216,6 +216,11 @@ is allowed between them.
 | 2026-11-16 | 0.3 DAO prepare (phase 1) | implementation done from source; awaiting an observed prepare transaction |
 | 2026-11-16 | 0.4 xUDT | closed on testnet evidence (amount, extension data, owner-mode flags); mainnet fixture still owed |
 | 2026-11-16 | 0.5 Spore | implemented + unit-tested; no chain fixture found (1,200 mainnet / 900 testnet blocks) |
+| 2026-11-16 | 0.6 OmniLock | descriptor done (auth scheme + modes); still refused, no profile |
+| 2026-11-16 | 0.7 `since` | absolute/relative block, epoch and timestamp decoded and shown |
+| 2026-11-16 | 0.9 CLI | `--json` + exit codes 0/1/2 |
+| 2026-11-16 | 0.10 portability | contract written in `docs/03-portability.md` |
+| 2026-11-16 | 0.8 corpus 20+ | blocked: needs an indexer query, not block scanning |
 
 ---
 

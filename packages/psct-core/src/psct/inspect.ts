@@ -8,6 +8,8 @@ import { classifyLock, classifyType } from "../profiles.js";
 import { inspectDao, isDaoType, type DaoFinding } from "../dao.js";
 import { summarizeTokens, tokenKind, type TokenSummary } from "../xudt.js";
 import { inspectSpore, sporeKind, type SporeFinding } from "../spore.js";
+import { describeOmnilock } from "../omnilock.js";
+import { decodeSinceInfo, type SinceInfo } from "../since.js";
 import type { BoundCell } from "./bind.js";
 
 export interface Delta {
@@ -36,6 +38,8 @@ export interface Inspection {
   interestKnown: boolean;
   tokens: TokenSummary[];
   spore: SporeFinding[];
+  /** Index-aligned with tx.inputs. */
+  since: SinceInfo[];
 }
 
 export interface InspectOptions {
@@ -79,6 +83,7 @@ export function inspect(
 
   const tokens = summarizeTokens(tx, bound);
   const spore = inspectSpore(tx, bound);
+  const since = tx.inputs.map((i) => decodeSinceInfo(i.since));
 
   bound.forEach((b, i) => {
     const c = b.cellOutput;
@@ -172,7 +177,16 @@ export function inspect(
     if (p.kind === "unknown") {
       warnings.push(`input ${i}: lock unknown (${b.cellOutput.lock.codeHash.slice(0, 18)}…)`);
     } else if (p.profile === null) {
-      warnings.push(`input ${i}: lock "${p.name}" — no verification profile`);
+      const detail = describeOmnilock(b.cellOutput.lock) ?? `"${p.name}"`;
+      warnings.push(`input ${i}: lock ${detail} — no verification profile`);
+    }
+  });
+
+  since.forEach((s, i) => {
+    if (s.kind === "unknown") return;
+    warnings.push(`input ${i}: since = ${s.text}`);
+    if (s.relative) {
+      warnings.push(`input ${i}: relative lock — this transaction may be unspendable until it matures`);
     }
   });
   if (fee < 0n && interestKnown) {
@@ -196,6 +210,7 @@ export function inspect(
     interestKnown,
     tokens,
     spore,
+    since,
   };
 }
 
