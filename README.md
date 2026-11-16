@@ -33,27 +33,26 @@ Later: `spec/`, a second implementation (Rust), the coordinator, the software si
 
 ## Status
 
-Stage 0 is in progress:
+Stage 0 complete; stage 1 in progress.
 
-- `tx_hash` reproduces the node on 25/25 transactions.
-- Signatures verify on 25/25 secp256k1 lock groups.
 - 13 offline-verifiable fixtures: mainnet (plain, V2 multisig, DAO prepare + withdraw), testnet
   (xUDT, Spore), devnet (legacy 2-of-3 multisig accepted by consensus). 15 lock groups verified.
 - The input-claim attack (fee inflation without touching the signed bytes) is reproduced and
   rejected by the binding check.
-- 42 hostile tests; malformed input produces verdicts, never crashes.
+- PSCT v0 frozen ([`spec/psct-v0.md`](spec/psct-v0.md)): canonical CBOR, witness templates,
+  hash-bound input proofs, per-group signatures, commutative combine, finalize-or-throw.
+- TypeScript codec and 3 signed conformance vectors (secp, multisig, DAO).
+- 56 tests across the verifier and the container.
 
-Covered: single-key secp256k1, multisig legacy + V2, Nervos DAO prepare + withdraw, xUDT, Spore.
 Not modelled (and refused): OmniLock auth schemes, JoyID, NostrLock, Spore clusters/DIDs.
 
 ```bash
 cd packages/psct-core
 npm install
-npm test                                          # hostile suite + offline fixtures
+npm test                                          # verifier + PSCT + offline fixtures
+npm run vectors                                   # regenerate conformance vectors
 npm run redteam                                   # the attack demo
-npx tsx src/cli.ts inspect <txhash>
 npx tsx src/cli.ts inspect <txhash> --json
-npx tsx src/cli.ts verify <txhash> --json
 ```
 
 Exit codes: `0` ok · `1` refused/failed · `2` usage. JSON encodes bigints as decimal strings.

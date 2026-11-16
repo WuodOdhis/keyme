@@ -102,6 +102,26 @@ export function readU32(buf: Uint8Array, off: number): number {
   return dv(buf).getUint32(off, true);
 }
 
+export function readU64(buf: Uint8Array, off: number): bigint {
+  return dv(buf).getBigUint64(off, true);
+}
+
+/** Dynamic vector item offsets; the count is implied by the first offset. */
+export function dynVecOffsets(buf: Uint8Array, start: number): number[] {
+  const size = readU32(buf, start);
+  if (size === 4) return [];
+  const first = readU32(buf, start + 4);
+  const count = (first - 4) / 4;
+  const out: number[] = [];
+  for (let i = 0; i < count; i++) out.push(start + readU32(buf, start + 4 + 4 * i));
+  return out;
+}
+
+/** Fixed vector item count (no size field, just a count). */
+export function fixedVecCount(buf: Uint8Array, start: number): number {
+  return readU32(buf, start);
+}
+
 /** Table field offsets, absolute. A table's field count comes from the schema, not from size. */
 export function tableOffsets(buf: Uint8Array, start: number, count: number): number[] {
   const out: number[] = [];

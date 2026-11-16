@@ -1,14 +1,20 @@
 /** CKB data structures: encode to molecule, parse from RPC JSON. */
 
-import { hexToBytes, toBigInt } from "./bytes.js";
+import { bytesToHex, hexToBytes, toBigInt } from "./bytes.js";
 import {
   byte,
   byte32,
   bytesVec,
   dynVec,
+  dynVecOffsets,
+  fixedVecCount,
   fixVec,
   option,
+  readBytes,
+  readU32,
+  readU64,
   table,
+  tableOffsets,
   u32,
   u64,
 } from "./molecule.js";
@@ -175,6 +181,92 @@ export function fromRpcHeader(h: RpcHeader): Header {
 /** A transaction with its witnesses removed. Binding hashes RawTransaction, so witnesses are dead weight. */
 export function stripWitnesses(t: Transaction): Transaction {
   return { ...t, witnesses: [] };
+}
+
+// ---------------------------------------------------------------- decoding
+
+const HASH_TYPE_NAME: Record<number, HashType> = {
+  0: "data",
+  1: "type",
+  2: "data1",
+  4: "data2",
+};
+
+export function decodeScript(buf: Uint8Array, start: number): Script {
+  const offs = tableOffsets(buf, start, 3);
+  const hashType = buf[offs[1]!]!;
+  const name = HASH_TYPE_NAME[hashType];
+  if (!name) throw new Error(`unknown hash type ${hashType}`);
+  return {
+    codeHash: bytesToHex(buf.slice(offs[0]!, offs[0]! + 32)),
+    hashType: name,
+    args: bytesToHex(readBytes(buf, offs[2]!)),
+  };
+}
+
+export function decodeCellOutput(buf: Uint8Array, start: number): CellOutput {
+  const offs = tableOffsets(buf, start, 3);
+  const capacity = readU64(buf, offs[0]!);
+  const lock = decodeScript(buf, offs[1]!);
+  const typeStart = offs[2]!;
+  const typeEnd = start + readU32(buf, start);
+  const type = typeEnd <= typeStart ? null : decodeScript(buf, typeStart);
+  return { capacity, lock, type };
+}
+
+export function decodeOutPoint(buf: Uint8Array, start: number): OutPoint {
+  return {
+    txHash: bytesToHex(buf.slice(start, start + 32)),
+    index: readU32(buf, start + 32),
+  };
+}
+
+/** Decode the 6-field RawTransaction. Throws on anything that does not round-trip structurally. */
+export function decodeRawTransaction(buf: Uint8Array): Transaction {
+  const offs = tableOffsets(buf, 0, 6);
+  const size = buf.length;
+  const end = (i: number) => (i + 1 < offs.length ? offs[i + 1]! : size);
+
+  const version = readU32(buf, offs[0]!);
+
+  const depCount = fixedVecCount(buf, offs[1]!);
+  const cellDeps: CellDep[] = [];
+  for (let i = 0; i < depCount; i++) {
+    const at = offs[1]! + 4 + i * 37;
+    const depType = buf[at + 36]!;
+    const name = DEP_TYPE_NAME[depType];
+    if (!name) throw new Error(`unknown dep type ${depType}`);
+    cellDeps.push({ outPoint: decodeOutPoint(buf, at), depType: name });
+  }
+
+  const headerCount = fixedVecCount(buf, offs[2]!);
+  const headerDeps: string[] = [];
+  for (let i = 0; i < headerCount; i++) {
+    const at = offs[2]! + 4 + i * 32;
+    headerDeps.push(bytesToHex(buf.slice(at, at + 32)));
+  }
+
+  const inputCount = fixedVecCount(buf, offs[3]!);
+  const inputs: CellInput[] = [];
+  for (let i = 0; i < inputCount; i++) {
+    const at = offs[3]! + 4 + i * 44;
+    inputs.push({
+      since: readU64(buf, at),
+      previousOutput: decodeOutPoint(buf, at + 8),
+    });
+  }
+
+  const outputOffsets = dynVecOffsets(buf, offs[4]!);
+  const outputs = outputOffsets.map((o) => decodeCellOutput(buf, o));
+
+  const dataOffsets = dynVecOffsets(buf, offs[5]!);
+  const outputsData = dataOffsets.map((o) => bytesToHex(readBytes(buf, o)));
+
+  if (outputs.length !== outputsData.length) {
+    throw new Error(`outputs (${outputs.length}) and outputs_data (${outputsData.length}) differ`);
+  }
+
+  return { version, cellDeps, headerDeps, inputs, outputs, outputsData, witnesses: [] };
 }
 
 // ---------------------------------------------------------------- RPC JSON

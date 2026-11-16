@@ -6,7 +6,8 @@
   "description": "PSCT core: molecule, sighash, proof binding, inspect, verify.",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/hostile.test.ts && tsx src/scripts/offline.ts",
+    "test": "tsx --test src/hostile.test.ts src/psct.test.ts && tsx src/scripts/offline.ts",
+    "vectors": "tsx src/scripts/make-vectors.ts",
     "selftest": "tsx src/scripts/selftest.ts",
     "collect": "tsx src/scripts/collect.ts",
     "redteam": "tsx src/scripts/redteam.ts",

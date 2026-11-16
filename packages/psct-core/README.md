@@ -34,23 +34,29 @@ src/
   hash.ts         blake2b("ckb-default-hash"), tx_hash, script hash
   sighash.ts      WitnessArgs, zeroed-lock placeholder, sighash-all message
   verify.ts       pubkey recovery, per-group verification
+  cbor.ts         canonical CBOR for the PSCT envelope
+  address.ts      bech32m addresses (short = bech32, full = bech32m)
+  profiles.ts     lock/type registry: names + verifiability
   rpc.ts          minimal JSON-RPC client
   psct/
+    container.ts  PSCT v0: encode/decode, build, combine, finalize
     bind.ts       hash-bind every input to its creating transaction
     inspect.ts    fee, deltas, change candidates, warnings - from bound data only
     proofs.ts     resolve proofs from a node (dev convenience)
   cli.ts
-  address.ts      bech32m addresses (short = bech32, full = bech32m)
   fixtures.ts     fixture loading
-  profiles.ts     lock/type registry: names + verifiability
-  hostile.test.ts 17 acceptance tests for the strict trust model
+  hostile.test.ts verifier acceptance tests
+  psct.test.ts    container conformance tests
   scripts/
     selftest.ts   live hash/signature check
     offline.ts    fixture check, no network
     redteam.ts    the attack demo
     collect.ts    fixture collector
+    make-vectors.ts  regenerate conformance vectors
+    devnet-multisig.ts  2-of-3 legacy spend against a local devnet
     identify-lock.ts  name an unknown code hash from its deployment cell
-fixtures/         mainnet transactions + input proofs + manifest
+fixtures/         transactions + proofs + manifest
+vectors/          signed PSCT conformance vectors (base64)
 ```
 
 ## Invariants

@@ -222,6 +222,13 @@ is allowed between them.
 | 2026-11-16 | 0.8 corpus | **amended** — every class represented (13 fixtures); 20+ dropped as an arbitrary number |
 | 2026-11-16 | 0.9 CLI | `--json` + exit codes 0/1/2 |
 | 2026-11-16 | 0.10 portability | contract written in `docs/03-portability.md` |
+| 2026-11-16 | 1.1 data model | **frozen** — `spec/psct-v0.md` |
+| 2026-11-16 | 1.2 digest | `tx_hash` + display fingerprint; covers tx, not witnesses/proofs |
+| 2026-11-16 | 1.3 TypeScript codec | canonical CBOR, envelope, combine, finalize |
+| 2026-11-16 | 1.5 conformance vectors | 3 signed vectors: secp, multisig, DAO withdraw |
+| 2026-11-16 | 1.7 spec | written from what the verifier enforces |
+| — | 1.4 Rust implementation | pending |
+| — | 1.6 `ckb-cli` interop | pending |
 
 ---
 
