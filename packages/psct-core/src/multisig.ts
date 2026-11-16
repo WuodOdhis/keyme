@@ -27,7 +27,9 @@ const BLAKE160_SIZE = 20;
 const FLAGS_SIZE = 4;
 const SINCE_VALUE_BITS = 56n;
 const SINCE_VALUE_MASK = (1n << SINCE_VALUE_BITS) - 1n;
-const SINCE_EPOCH_FLAG = 1n;
+// RFC-0017: bit 7 = relative, bits 6..5 = metric. 0x20 = absolute epoch (with fraction).
+// 0x00 = absolute block, 0x40 = absolute timestamp, 0xA0 = relative epoch, etc.
+const SINCE_EPOCH_FLAG = 0x20n;
 
 export interface MultisigScript {
   requireFirstN: number;

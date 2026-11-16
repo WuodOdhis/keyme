@@ -17,6 +17,8 @@ export interface Fixture {
   tx: Transaction;
   proofs: InputProof[];
   fee: string;
+  /** Raw headers by hash, for header_deps (Nervos DAO withdraws need them). */
+  headers: Map<string, string>;
 }
 
 const DIR = join(process.cwd(), "fixtures");
@@ -74,8 +76,15 @@ export function loadFixture(hash: string): Fixture {
   const fixture: Fixture = {
     hash,
     tx: reviveTx(f.tx),
-    proofs: f.proofs.map((p: any) => ({ prevTx: reviveTx(p.prevTx), index: p.index })),
+    proofs: f.proofs.map((p: any) => ({
+      prevTx: reviveTx(p.prevTx),
+      index: p.index,
+      blockHash: p.blockHash,
+    })),
     fee: entry.fee,
+    headers: new Map(
+      Object.entries(f.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v as string]),
+    ),
   };
   cache.set(hash, fixture);
   return fixture;

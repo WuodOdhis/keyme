@@ -102,6 +102,76 @@ export function encodeTransaction(t: Transaction): Uint8Array {
   return table(encodeRawTransaction(t), dynVec(t.witnesses.map((w) => bytesVec(hexToBytes(w)))));
 }
 
+/** A CKB block header as a molecule struct (208 bytes). */
+export interface Header {
+  version: number;
+  compactTarget: number;
+  timestamp: bigint;
+  number: bigint;
+  epoch: bigint;
+  parentHash: Hex;
+  transactionsRoot: Hex;
+  proposalsHash: Hex;
+  extraHash: Hex;
+  dao: Hex;
+  nonce: bigint;
+}
+
+function u128(n: bigint): Uint8Array {
+  const b = new Uint8Array(16);
+  new DataView(b.buffer).setBigUint64(0, n & 0xffffffffffffffffn, true);
+  new DataView(b.buffer).setBigUint64(8, n >> 64n, true);
+  return b;
+}
+
+/** Header is a fixed struct: fields concatenated, no offsets. */
+export function encodeHeader(h: Header): Uint8Array {
+  return new Uint8Array([
+    ...u32(h.version),
+    ...u32(h.compactTarget),
+    ...u64(h.timestamp),
+    ...u64(h.number),
+    ...u64(h.epoch),
+    ...hexToBytes(h.parentHash),
+    ...hexToBytes(h.transactionsRoot),
+    ...hexToBytes(h.proposalsHash),
+    ...hexToBytes(h.extraHash),
+    ...hexToBytes(h.dao),
+    ...u128(h.nonce),
+  ]);
+}
+
+export interface RpcHeader {
+  version: Hex;
+  compact_target: Hex;
+  timestamp: Hex;
+  number: Hex;
+  epoch: Hex;
+  parent_hash: Hex;
+  transactions_root: Hex;
+  proposals_hash: Hex;
+  extra_hash: Hex;
+  dao: Hex;
+  nonce: Hex;
+  hash?: Hex;
+}
+
+export function fromRpcHeader(h: RpcHeader): Header {
+  return {
+    version: Number(toBigInt(h.version)),
+    compactTarget: Number(toBigInt(h.compact_target)),
+    timestamp: toBigInt(h.timestamp),
+    number: toBigInt(h.number),
+    epoch: toBigInt(h.epoch),
+    parentHash: h.parent_hash,
+    transactionsRoot: h.transactions_root,
+    proposalsHash: h.proposals_hash,
+    extraHash: h.extra_hash,
+    dao: h.dao,
+    nonce: toBigInt(h.nonce),
+  };
+}
+
 /** A transaction with its witnesses removed. Binding hashes RawTransaction, so witnesses are dead weight. */
 export function stripWitnesses(t: Transaction): Transaction {
   return { ...t, witnesses: [] };

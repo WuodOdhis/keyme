@@ -14,6 +14,7 @@ import type { RpcTransaction, Transaction } from "../ckb.js";
 import { resolveProofs } from "../psct/proofs.js";
 import { bindAll } from "../psct/bind.js";
 import { classifyLock } from "../profiles.js";
+import { isDaoType } from "../dao.js";
 import { toJson } from "../fixtures.js";
 import { txHash } from "../hash.js";
 import type { InputProof } from "../psct/bind.js";
@@ -52,6 +53,12 @@ async function main() {
       const unknown = bound.map((b) => classifyLock(b.cellOutput.lock)).find((k) => k.kind === "unknown");
       if (unknown) {
         console.warn(`skip ${hash}: ${unknown.name}`);
+        continue;
+      }
+
+      // DAO transactions mint interest and need headers; import them deliberately with import-tx.
+      if (tx.headerDeps.length > 0 || bound.some((b) => isDaoType(b.cellOutput.type))) {
+        console.warn(`skip ${hash}: Nervos DAO transaction (use import-tx)`);
         continue;
       }
       const fee = bound.reduce((n, b) => n + b.cellOutput.capacity, 0n) - tx.outputs.reduce((n, o) => n + o.capacity, 0n);

@@ -1,7 +1,7 @@
 /** CKB hashing: blake2b-256 with the "ckb-default-hash" personalisation. */
 
 import { blake2b } from "@noble/hashes/blake2b";
-import { encodeRawTransaction, encodeScript, type Script, type Transaction } from "./ckb.js";
+import { encodeHeader, encodeRawTransaction, encodeScript, type Header, type Script, type Transaction } from "./ckb.js";
 import { bytesToHex } from "./bytes.js";
 
 const PERSONAL = new TextEncoder().encode("ckb-default-hash");
@@ -21,4 +21,8 @@ export function txHash(tx: Transaction): string {
 
 export function scriptHash(s: Script): string {
   return bytesToHex(ckbHash(encodeScript(s)));
+}
+
+export function headerHash(h: Header): string {
+  return bytesToHex(ckbHash(encodeHeader(h)));
 }

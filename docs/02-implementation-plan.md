@@ -212,6 +212,8 @@ is allowed between them.
 |---|---|---|
 | 2026-11-16 | 0.1 legacy multisig | implementation done from source; awaiting an observed legacy spend |
 | 2026-11-16 | 0.2 multisig V2 | closed — verified against a mainnet 3-of-5 spend (fiber-scripts PR #34) |
+| 2026-11-16 | 0.3 DAO withdraw | closed — verified against a mainnet withdraw, interest and fee reconciled |
+| 2026-11-16 | 0.3 DAO prepare (phase 1) | implementation done from source; awaiting an observed prepare transaction |
 
 ---
 

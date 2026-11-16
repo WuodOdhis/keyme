@@ -18,6 +18,8 @@ export interface InputProof {
   /** Optional claims. If present they must match the bound output exactly. */
   cellOutput?: CellOutput;
   data?: string;
+  /** Block that contains the creating transaction. Needed for DAO interest and since checks. */
+  blockHash?: string;
 }
 
 export interface BoundCell {
@@ -25,6 +27,7 @@ export interface BoundCell {
   index: number;
   cellOutput: CellOutput;
   data: string;
+  blockHash?: string;
 }
 
 export class BindError extends Error {
@@ -96,7 +99,7 @@ export function bindInput(tx: Transaction, inputIndex: number, proof: InputProof
     throw new BindError(`data claim does not match bound output`, inputIndex);
   }
 
-  return { outPointTxHash: op.txHash, index: proof.index, cellOutput: out, data };
+  return { outPointTxHash: op.txHash, index: proof.index, cellOutput: out, data, blockHash: proof.blockHash };
 }
 
 /** Bind every input; throws on the first failure. */

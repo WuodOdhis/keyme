@@ -1,91 +1,45 @@
 /**
  * Offline fixture test — no RPC.
  *
- * Proves three things without a node:
+ * Proves, without a node:
  *   - the fixture's bytes re-hash to the recorded tx_hash
  *   - every input binds to its creating transaction
  *   - every known-profile signature verifies
+ *   - the recorded fee matches inspection (including DAO interest when headers are present)
  *
  * Run: npx tsx src/scripts/offline.ts
  */
 
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
-import type { Transaction, CellOutput, Script } from "../ckb.js";
-import { bindAll, type InputProof } from "../psct/bind.js";
+import { bindAll } from "../psct/bind.js";
 import { inspect } from "../psct/inspect.js";
 import { txHash } from "../hash.js";
 import { verifyTx } from "../verify.js";
-
-interface ManifestEntry {
-  hash: string;
-  inputs: number;
-  outputs: number;
-  fee: string;
-}
-
-function reviveScript(o: Script): Script {
-  return { codeHash: o.codeHash, hashType: o.hashType, args: o.args };
-}
-
-function reviveOutput(o: CellOutput): CellOutput {
-  return {
-    capacity: BigInt(o.capacity as unknown as string),
-    lock: reviveScript(o.lock),
-    type: o.type ? reviveScript(o.type) : null,
-  };
-}
-
-function reviveTx(o: any): Transaction {
-  return {
-    version: Number(o.version),
-    cellDeps: o.cellDeps.map((d: any) => ({ outPoint: d.outPoint, depType: d.depType })),
-    headerDeps: o.headerDeps,
-    inputs: o.inputs.map((i: any) => ({
-      since: BigInt(i.since as unknown as string),
-      previousOutput: i.previousOutput,
-    })),
-    outputs: o.outputs.map(reviveOutput),
-    outputsData: o.outputsData,
-    witnesses: o.witnesses,
-  };
-}
+import { loadFixture, loadManifest } from "../fixtures.js";
 
 function main() {
-  const dir = join(process.cwd(), "fixtures");
-  const manifest: ManifestEntry[] = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
+  const manifest = loadManifest();
   let failures = 0;
   let groupsVerified = 0;
   let noProfile = 0;
   const unknownLocks = new Map<string, number>();
 
   for (const entry of manifest) {
-    const file = join(dir, `${entry.hash}.json`);
-    if (!readdirSync(dir).includes(`${entry.hash}.json`)) {
-      console.log(`FAIL ${entry.hash}: fixture missing`);
-      failures++;
-      continue;
-    }
-    const f = JSON.parse(readFileSync(file, "utf8"));
-    const tx = reviveTx(f.tx);
-    const proofs: InputProof[] = f.proofs.map((p: any) => ({
-      prevTx: reviveTx(p.prevTx),
-      index: p.index,
-    }));
-
+    const f = loadFixture(entry.hash);
+    const { tx } = f;
     const problems: string[] = [];
+
     if (txHash(tx) !== entry.hash) problems.push(`tx_hash ${txHash(tx)}`);
 
     let bound;
     try {
-      bound = bindAll(tx, proofs);
+      bound = bindAll(tx, f.proofs);
     } catch (e) {
       console.log(`FAIL ${entry.hash}: ${(e as Error).message}`);
       failures++;
       continue;
     }
 
-    const r = inspect(tx, bound);
+    const r = inspect(tx, bound, { headers: f.headers });
     if (r.fee.toString() !== entry.fee) problems.push(`fee ${r.fee} != ${entry.fee}`);
 
     const results = verifyTx(tx, bound);
@@ -110,8 +64,9 @@ function main() {
       console.log(`FAIL ${entry.hash}`);
       for (const p of problems) console.log(`     ${p}`);
     } else {
+      const dao = r.dao.length ? ` dao=${r.dao.map((d) => d.kind).join(",")}` : "";
       console.log(
-        `ok   ${entry.hash.slice(0, 18)}… inputs=${entry.inputs} groups=${results.length} fee=${entry.fee}`,
+        `ok   ${entry.hash.slice(0, 18)}… inputs=${entry.inputs} groups=${results.length} fee=${entry.fee}${dao}`,
       );
     }
   }

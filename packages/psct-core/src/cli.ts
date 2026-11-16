@@ -11,10 +11,11 @@
 
 import { fmtCkb } from "./bytes.js";
 import { MAINNET, TESTNET, type Rpc } from "./rpc.js";
-import { resolveProofs } from "./psct/proofs.js";
+import { resolveHeaders, resolveProofs } from "./psct/proofs.js";
 import { bindAll } from "./psct/bind.js";
 import { inspect } from "./psct/inspect.js";
 import { verifyTx } from "./verify.js";
+import { describeEpoch } from "./dao.js";
 
 function usage(): never {
   console.error("usage: psct <inspect|verify|redteam> [txhash] [--rpc mainnet|testnet]");
@@ -46,17 +47,33 @@ async function main() {
 
   if (!hash) usage();
   const tx = await rpc.tx(hash);
-  const bound = bindAll(tx, await resolveProofs(tx, rpc));
+  const proofs = await resolveProofs(tx, rpc, { blockHashes: true });
+  const bound = bindAll(tx, proofs);
 
   if (cmd === "inspect") {
-    const r = inspect(tx, bound);
+    const headers = await resolveHeaders(tx, proofs, rpc);
+    const r = inspect(tx, bound, { headers });
     console.log(`tx            ${r.txHash}`);
     console.log(`inputs        ${tx.inputs.length}`);
     console.log(`outputs       ${tx.outputs.length}`);
     console.log(`in capacity   ${fmtCkb(r.inputCapacity)} CKB`);
     console.log(`out capacity  ${fmtCkb(r.outputCapacity)} CKB`);
-    console.log(`fee           ${r.feeCkb} CKB`);
+    console.log(`fee           ${r.feeCkb} CKB${r.interestKnown ? "" : " (lower bound)"}`);
     console.log(`change        ${r.changeCandidates.join(", ") || "none"}`);
+    if (r.dao.length) {
+      console.log("");
+      console.log("nervos dao");
+      for (const f of r.dao) {
+        const bits = [`input ${f.input}: ${f.kind}`];
+        if (f.depositBlockNumber !== undefined) bits.push(`deposit block ${f.depositBlockNumber}`);
+        if (f.depositEpoch) bits.push(`deposit epoch ${describeEpoch(f.depositEpoch)}`);
+        if (f.matureAt) bits.push(`matures ${describeEpoch(f.matureAt)}`);
+        if (f.mature !== null) bits.push(f.mature ? "mature" : "NOT mature");
+        if (f.interest !== undefined) bits.push(`interest ${fmtCkb(f.interest)} CKB`);
+        console.log("  " + bits.join(" | "));
+        for (const issue of f.issues) console.log(`    issue: ${issue}`);
+      }
+    }
     console.log("");
     console.log("deltas (output - input, per script)");
     for (const d of r.deltas) {

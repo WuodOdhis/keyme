@@ -1,9 +1,11 @@
 /** Read-only inspection of a transaction, computed only from bound cells. */
 
 import { bytesToHex, hexToBytes, fmtCkb } from "../bytes.js";
-import { encodeCellOutput, type CellOutput, type Script, type Transaction } from "../ckb.js";
+import { type CellOutput, type Script, type Transaction } from "../ckb.js";
+import { occupiedBytes } from "../capacity.js";
 import { scriptHash, txHash } from "../hash.js";
 import { classifyLock, classifyType } from "../profiles.js";
+import { inspectDao, isDaoType, type DaoFinding } from "../dao.js";
 import type { BoundCell } from "./bind.js";
 
 export interface Delta {
@@ -25,6 +27,11 @@ export interface Inspection {
   deltas: Delta[];
   changeCandidates: number[];
   warnings: string[];
+  dao: DaoFinding[];
+  /** DAO interest minted by this transaction (0 when there is no withdraw). */
+  daoInterest: bigint;
+  /** False when a withdraw is present but its headers are missing, so interest is unknown. */
+  interestKnown: boolean;
 }
 
 function u128le(data: Uint8Array): bigint {
@@ -41,6 +48,8 @@ function typeKey(t: Script | null): string {
 export interface InspectOptions {
   /** Locks the signer considers its own (derived from the paired account, not from the file). */
   ownLocks?: Script[];
+  /** Raw headers by hash. DAO withdraws need the deposit header and the withdrawing cell's block. */
+  headers?: Map<string, string>;
 }
 
 export function inspect(
@@ -52,10 +61,17 @@ export function inspect(
 
   const inputCapacity = bound.reduce((n, b) => n + b.cellOutput.capacity, 0n);
   const outputCapacity = tx.outputs.reduce((n, o) => n + o.capacity, 0n);
-  const fee = inputCapacity - outputCapacity;
+
+  // DAO withdraws mint interest, so inputs - outputs is not the fee. Compute it from the headers
+  // when they are present, and say so when they are not.
+  const dao = inspectDao(tx, bound, { headers: opts.headers ?? new Map() });
+  const withdrawing = dao.filter((f) => f.kind === "withdrawing");
+  const interestKnown = withdrawing.every((f) => f.interest !== undefined);
+  const daoInterest = withdrawing.reduce((n, f) => n + (f.interest ?? 0n), 0n);
+  const fee = inputCapacity + daoInterest - outputCapacity;
 
   const occupied = tx.outputs.map((o, i) => {
-    const bytes = 8 + encodeCellOutput(o).length + hexToBytes(tx.outputsData[i] ?? "0x").length;
+    const bytes = occupiedBytes(o, tx.outputsData[i] ?? "0x");
     return { index: i, bytes, ckb: fmtCkb(BigInt(bytes) * 100_000_000n) };
   });
 
@@ -84,6 +100,7 @@ export function inspect(
       return;
     }
     bump("ckb-locked", "ckb", "input", c.capacity);
+    if (isDaoType(c.type)) return; // DAO data is a block number, not an amount
     const amount = amountOf(b.data, `input ${i}`);
     if (amount !== null) bump(typeKey(c.type), "token", "input", amount);
   });
@@ -93,6 +110,7 @@ export function inspect(
       return;
     }
     bump("ckb-locked", "ckb", "output", o.capacity);
+    if (isDaoType(o.type)) return;
     const amount = amountOf(tx.outputsData[i] ?? "0x", `output ${i}`);
     if (amount !== null) bump(typeKey(o.type), "token", "output", amount);
   });
@@ -109,11 +127,24 @@ export function inspect(
     }
   }
   tx.outputs.forEach((o, i) => {
-    if (o.type) warnings.push(`output ${i}: type script ${classifyType(o.type)} (not fully resolved)`);
+    if (o.type && !isDaoType(o.type)) {
+      warnings.push(`output ${i}: type script ${classifyType(o.type)} (not fully resolved)`);
+    }
     if (!o.type && hexToBytes(tx.outputsData[i] ?? "0x").length > 0) {
       warnings.push(`output ${i}: carries data but has no type script`);
     }
   });
+
+  for (const f of dao) {
+    for (const issue of f.issues) warnings.push(`input ${f.input} (DAO ${f.kind}): ${issue}`);
+  }
+  if (withdrawing.length > 0) {
+    if (!interestKnown) {
+      warnings.push("DAO withdraw: interest is unknown (missing header), so the fee is a lower bound");
+    } else if (daoInterest > 0n) {
+      warnings.push(`DAO withdraw mints ${fmtCkb(daoInterest)} CKB of interest`);
+    }
+  }
 
   bound.forEach((b, i) => {
     const p = classifyLock(b.cellOutput.lock);
@@ -123,7 +154,9 @@ export function inspect(
       warnings.push(`input ${i}: lock "${p.name}" — no verification profile`);
     }
   });
-  if (fee < 0n) warnings.push(`negative fee: outputs exceed inputs — invalid transaction`);
+  if (fee < 0n && interestKnown) {
+    warnings.push(`negative fee: outputs exceed inputs and DAO interest — invalid transaction`);
+  }
   if (fee > 100_000_000n) warnings.push(`fee above 1 CKB (${fmtCkb(fee)}) — verify manually`);
   if (changeCandidates.length === 0) warnings.push(`no change output recognised`);
 
@@ -137,6 +170,9 @@ export function inspect(
     deltas: [...deltas.values()],
     changeCandidates,
     warnings,
+    dao,
+    daoInterest,
+    interestKnown,
   };
 }
 

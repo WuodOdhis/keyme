@@ -15,6 +15,8 @@ import { inspect } from "./psct/inspect.js";
 import { verifyTx } from "./verify.js";
 import { witnessLock, decodeWitnessArgs, encodeWitnessArgs } from "./sighash.js";
 import { decodeMultisigLock } from "./multisig.js";
+import { occupiedBytes } from "./capacity.js";
+import { DAO_CODE_HASH, classifyDaoCell } from "./dao.js";
 import { txHash } from "./hash.js";
 import { hexToBytes, bytesToHex } from "./bytes.js";
 import { loadFixture, loadManifest } from "./fixtures.js";
@@ -27,9 +29,16 @@ const manifest = loadManifest();
 const plain = (() => {
   for (const e of [...manifest].sort((a, b) => a.inputs - b.inputs)) {
     const f = loadFixture(e.hash);
-    const r = verifyTx(f.tx, bindAll(f.tx, f.proofs));
-    // Every group must be a verified single-key secp256k1 group — "contains one" is not enough.
-    if (r.length > 0 && r.every((x) => x.profile === SECP_PROFILE && x.verdict === "verified")) {
+    const bound = bindAll(f.tx, f.proofs);
+    const r = verifyTx(f.tx, bound);
+    const insp = inspect(f.tx, bound, { headers: f.headers });
+    // "Plain" = every lock group is verified single-key secp AND nothing is minted (no DAO).
+    // A DAO cell also has a secp lock; it is not a plain payment.
+    if (
+      r.length > 0 &&
+      r.every((x) => x.profile === SECP_PROFILE && x.verdict === "verified") &&
+      insp.dao.length === 0
+    ) {
       return f;
     }
   }
@@ -246,6 +255,54 @@ describe("multisig", () => {
     tx.witnesses[i] = replaceLock(i, lock.slice(0, lock.length - 1));
     const results = verifyTx(tx, bindAll(tx, ms.proofs));
     assert.ok(results.some((r) => r.verdict === "bad-signature"));
+  });
+});
+
+describe("nervos dao", () => {
+  const dao = (() => {
+    for (const e of manifest) {
+      const f = loadFixture(e.hash);
+      const r = inspect(f.tx, bindAll(f.tx, f.proofs), { headers: f.headers });
+      if (r.dao.some((x) => x.kind === "withdrawing")) return { f, r };
+    }
+    throw new Error("no DAO withdraw fixture");
+  })();
+
+  it("verifies the withdraw's lock signature", () => {
+    const bound = bindAll(dao.f.tx, dao.f.proofs);
+    assert.ok(verifyTx(dao.f.tx, bound).some((x) => x.verdict === "verified"));
+  });
+
+  it("computes interest and reconciles the fee", () => {
+    const w = dao.r.dao.find((x) => x.kind === "withdrawing")!;
+    assert.ok(w.interest !== undefined, "interest should be computable from the supplied headers");
+    assert.ok(w.interest! > 0n);
+    assert.equal(dao.r.interestKnown, true);
+    // fee = inputs + interest - outputs, and must be positive
+    assert.equal(dao.r.fee, dao.r.inputCapacity + dao.r.daoInterest - dao.r.outputCapacity);
+    assert.ok(dao.r.fee > 0n, `fee should be positive, got ${dao.r.fee}`);
+    assert.ok(w.mature === true);
+  });
+
+  it("refuses to invent interest when a header is missing", () => {
+    const r = inspect(dao.f.tx, bindAll(dao.f.tx, dao.f.proofs), { headers: new Map() });
+    assert.equal(r.interestKnown, false);
+    assert.ok(r.warnings.some((w) => /interest is unknown/.test(w)));
+  });
+
+  it("uses the flat occupied-capacity formula", () => {
+    const cell = bindAll(dao.f.tx, dao.f.proofs)[0]!;
+    // 8 (capacity) + 8 (data) + 20+33 (lock) + 0+33 (DAO type) = 102
+    assert.equal(occupiedBytes(cell.cellOutput, cell.data), 102);
+  });
+
+  it("identifies the cell as a withdrawing cell, not a token", () => {
+    const cell = bindAll(dao.f.tx, dao.f.proofs)[0]!;
+    assert.equal(cell.cellOutput.type!.codeHash.toLowerCase(), DAO_CODE_HASH);
+    const parsed = classifyDaoCell(cell.data);
+    assert.equal(parsed?.kind, "withdrawing");
+    // and the inspector must not report a token delta for it
+    assert.equal(dao.r.deltas.filter((d) => d.kind === "token").length, 0);
   });
 });
 

@@ -88,8 +88,8 @@ Six mainnet fixtures in `packages/psct-core/fixtures`. The offline test (`npm te
 re-binds, and re-verifies all of them with no RPC:
 
 ```
-fixtures              7
-groups verified       8
+fixtures              8
+groups verified       9
 refused: no profile   0
 refused: unknown lock 0
 failures              0
@@ -116,7 +116,7 @@ fixture that uses it and dumps readable strings from the deployment cell.
 
 ## 6. Hostile corpus, executable
 
-`src/hostile.test.ts` runs under `npm test` (21 tests). It is the acceptance criteria for D1:
+`src/hostile.test.ts` runs under `npm test` (26 tests). It is the acceptance criteria for D1:
 
 | Case | Expected |
 |---|---|
@@ -132,6 +132,9 @@ fixture that uses it and dumps readable strings from the deployment cell.
 | multisig: real 3-of-5 spend | verified |
 | multisig: swapped signature order | still verified (order-independent) |
 | multisig: zeroed signature / truncated lock | rejected |
+| DAO withdraw: interest + fee reconcile | positive fee, interest shown |
+| DAO withdraw without its header | interest unknown, warned |
+| occupied capacity | flat field sum, 102 bytes for the DAO cell |
 | unknown code hash | refused |
 | known lock with no profile (OmniLock) | refused, named |
 
@@ -189,7 +192,60 @@ Legacy multisig is implemented from the same source but has not yet appeared in 
 needs one observed legacy spend before it can be called closed; until then it is "implemented, V2
 validated".
 
-## 9. Next
+## 9. Nervos DAO (stage 0.3)
+
+Two shapes of DAO input cell, distinguished by their 8-byte data:
+
+| cell | data | spent in |
+|---|---|---|
+| deposit | `0` | withdraw phase 1 (prepare) |
+| withdrawing | deposit block number | withdraw phase 2 (withdraw) |
+
+Rules read from `dao.c`:
+
+- **Phase 1**: output at the same index must be a DAO cell with the same capacity, and its data
+  must equal the block number of the block containing the input cell.
+- **Phase 2**: the witness `input_type` is 8 bytes, and the script reads **only the first byte** as an
+  index into `header_deps`. That header is the deposit block; its number must equal the cell data.
+  The input `since` must have flags `0x20` (absolute epoch) and be at least deposit epoch + 180.
+
+### Two bugs this exposed
+
+**Occupied capacity is not the molecule size.** ckb's `capacity.rs` computes:
+
+```
+Script     = args.len + 32 + 1
+CellOutput = 8 + data.len + lock + (type if present)
+```
+
+Table headers, vector prefixes and the option tag are *not* counted. My first version used the
+molecule size, overstating a typical typed cell by 64 bytes. That understated DAO interest by
+0.103 CKB and made the fee look negative. It also made every "storage cost" figure wrong.
+
+**The fee is not `inputs - outputs`.** A DAO withdrawal *mints* interest, so outputs legitimately
+exceed inputs. The fee is `inputs + interest - outputs`. A signer that rejects a negative delta would
+refuse every valid withdrawal.
+
+### Evidence
+
+Real mainnet withdraw `0xfdf1c26c9d4eae42e6e53d3ea6ad9490fc01e9d17ed1bcd09c9eef51232bc160`:
+
+- deposit block 20,752,684 (epoch 15125.568/1702), withdrawn at 21,018,543
+- deposit header and the withdrawing cell's block header both supplied and hash-checked
+- interest **393.99530246 CKB**, fee **936 shannons**
+- balloon: 4.6 KB fixture (two 208-byte headers, hex-encoded)
+
+Phase 1 is implemented from the same source but no prepare transaction appeared in 500 scanned
+blocks. Like legacy multisig, it is "implemented, not yet observed".
+
+### Consequence for PSCT
+
+A withdraw proof needs **two headers**: the deposit header (already in `header_deps`) and the header
+of the block that created the withdrawing cell, which is not in the transaction at all. That is why
+`InputProof` carries `blockHash` and the fixture carries a header map. Stage 1 must treat headers as
+first-class proof data, not an optional convenience.
+
+## 10. Next
 
 1. Profiles for the user-facing locks that still have none: OmniLock, the three multisig deployments,
    JoyID, NostrLock. Multisig first — it is the actual treasury use case and it exercises the
