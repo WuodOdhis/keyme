@@ -88,8 +88,8 @@ Six mainnet fixtures in `packages/psct-core/fixtures`. The offline test (`npm te
 re-binds, and re-verifies all of them with no RPC:
 
 ```
-fixtures              8
-groups verified       9
+fixtures              9
+groups verified       10
 refused: no profile   0
 refused: unknown lock 0
 failures              0
@@ -116,7 +116,7 @@ fixture that uses it and dumps readable strings from the deployment cell.
 
 ## 6. Hostile corpus, executable
 
-`src/hostile.test.ts` runs under `npm test` (26 tests). It is the acceptance criteria for D1:
+`src/hostile.test.ts` runs under `npm test` (30 tests). It is the acceptance criteria for D1:
 
 | Case | Expected |
 |---|---|
@@ -135,6 +135,10 @@ fixture that uses it and dumps readable strings from the deployment cell.
 | DAO withdraw: interest + fee reconcile | positive fee, interest shown |
 | DAO withdraw without its header | interest unknown, warned |
 | occupied capacity | flat field sum, 102 bytes for the DAO cell |
+| xUDT: real mint | delta + owner-mode |
+| xUDT: owner mode via input type script | satisfied (flags 0x80000000) |
+| xUDT: amount with extension data | first 16 bytes only |
+| witness list shorter than inputs | message stops, no zero padding |
 | unknown code hash | refused |
 | known lock with no profile (OmniLock) | refused, named |
 
@@ -245,7 +249,47 @@ of the block that created the withdrawing cell, which is not in the transaction 
 `InputProof` carries `blockHash` and the fixture carries a header map. Stage 1 must treat headers as
 first-class proof data, not an optional convenience.
 
-## 10. Next
+## 10. xUDT (stage 0.4)
+
+Cell data is `<amount: uint128 LE> <xUDT data>` — the amount is the first 16 bytes, and trailing data
+is allowed (extension data). Args are:
+
+```
+<owner lock script hash: 32> <flags: uint32 LE> <extension data>
+```
+
+There is no mode byte. Owner mode follows the flags:
+
+| flags | owner hash is compared against |
+|---|---|
+| `flags & 0x80000000` | **input type script hashes** |
+| `flags & 0x40000000` | output type script hashes |
+| otherwise | input lock script hashes |
+
+That third row is the one everyone assumes. The real fixture uses `0x80000000`, so the owner is an
+input *type* script — checking input locks would have reported a valid mint as unauthorised.
+
+The same xUDT code is deployed with `hash_type: type` on mainnet and `data1` on testnet. The code
+hash identifies the token; the hash type only says how the deployment is referenced.
+
+### A framing bug this exposed
+
+The test transaction has 4 inputs and only 2 witnesses (three inputs share a lock). My sighash
+framing padded missing witnesses with zero-length entries. The lock scripts do not: they call
+`ckb_load_witness` per group input and **break on `CKB_INDEX_OUT_OF_BOUND`**.
+
+So for a transaction with fewer witnesses than inputs, the message ends at the first missing
+witness. This affected every profile (secp, multisig, DAO) and was invisible until a fixture with
+that shape appeared. Fixed in `sighashMessage`; the full suite now covers it.
+
+### Evidence
+
+Testnet mint `0xb498371d…`: xUDT delta **+9,999,999,682,019**, owner mode satisfied via an input type
+script, fee 40,410 shannons. It is a testnet fixture because no xUDT output appeared in 2,000 scanned
+mainnet blocks (only five type scripts are active there at the moment). The rules are
+network-independent, but a mainnet xUDT fixture is still owed.
+
+## 11. Next
 
 1. Profiles for the user-facing locks that still have none: OmniLock, the three multisig deployments,
    JoyID, NostrLock. Multisig first — it is the actual treasury use case and it exercises the

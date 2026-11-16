@@ -1,11 +1,12 @@
 /** Read-only inspection of a transaction, computed only from bound cells. */
 
 import { bytesToHex, hexToBytes, fmtCkb } from "../bytes.js";
-import { type CellOutput, type Script, type Transaction } from "../ckb.js";
+import type { Script, Transaction } from "../ckb.js";
 import { occupiedBytes } from "../capacity.js";
-import { scriptHash, txHash } from "../hash.js";
+import { txHash } from "../hash.js";
 import { classifyLock, classifyType } from "../profiles.js";
 import { inspectDao, isDaoType, type DaoFinding } from "../dao.js";
+import { summarizeTokens, tokenKind, type TokenSummary } from "../xudt.js";
 import type { BoundCell } from "./bind.js";
 
 export interface Delta {
@@ -32,17 +33,7 @@ export interface Inspection {
   daoInterest: bigint;
   /** False when a withdraw is present but its headers are missing, so interest is unknown. */
   interestKnown: boolean;
-}
-
-function u128le(data: Uint8Array): bigint {
-  let v = 0n;
-  for (let i = 15; i >= 0; i--) v = (v << 8n) | BigInt(data[i] ?? 0);
-  return v;
-}
-
-function typeKey(t: Script | null): string {
-  if (!t) return "ckb";
-  return `token:${scriptHash(t)}`;
+  tokens: TokenSummary[];
 }
 
 export interface InspectOptions {
@@ -84,14 +75,7 @@ export function inspect(
   };
   const warnings: string[] = [];
 
-  // xUDT stores the amount as a 16-byte LE integer. Anything else is a typed cell whose
-  // semantics we do not know, and must not be presented as a token movement.
-  const amountOf = (dataHex: string, where: string): bigint | null => {
-    const data = hexToBytes(dataHex);
-    if (data.length === 16) return u128le(data);
-    warnings.push(`${where}: typed cell with ${data.length}-byte data — semantics unknown`);
-    return null;
-  };
+  const tokens = summarizeTokens(tx, bound);
 
   bound.forEach((b, i) => {
     const c = b.cellOutput;
@@ -101,8 +85,10 @@ export function inspect(
     }
     bump("ckb-locked", "ckb", "input", c.capacity);
     if (isDaoType(c.type)) return; // DAO data is a block number, not an amount
-    const amount = amountOf(b.data, `input ${i}`);
-    if (amount !== null) bump(typeKey(c.type), "token", "input", amount);
+    if (!tokenKind(c.type)) {
+      const len = (b.data.length - 2) / 2;
+      warnings.push(`input ${i}: typed cell with ${len}-byte data — semantics unknown`);
+    }
   });
   tx.outputs.forEach((o, i) => {
     if (!o.type) {
@@ -111,9 +97,22 @@ export function inspect(
     }
     bump("ckb-locked", "ckb", "output", o.capacity);
     if (isDaoType(o.type)) return;
-    const amount = amountOf(tx.outputsData[i] ?? "0x", `output ${i}`);
-    if (amount !== null) bump(typeKey(o.type), "token", "output", amount);
+    if (!tokenKind(o.type)) {
+      const len = ((tx.outputsData[i] ?? "0x").length - 2) / 2;
+      warnings.push(`output ${i}: typed cell with ${len}-byte data — semantics unknown`);
+    }
   });
+
+  // Token movements come from the xUDT/sUDT summary, not from "any 16-byte data" heuristics.
+  for (const t of tokens) {
+    deltas.set(`token:${t.typeHash}`, {
+      key: `token:${t.typeHash}`,
+      kind: "token",
+      input: t.input,
+      output: t.output,
+      delta: t.delta,
+    });
+  }
 
   // Change candidates: outputs whose lock matches a lock the signer considers its own.
   const own = opts.ownLocks ?? bound.map((b) => b.cellOutput.lock);
@@ -121,14 +120,19 @@ export function inspect(
     .map((o, i) => i)
     .filter((i) => own.some((l) => sameLock(tx.outputs[i]!.lock, l)));
 
-  for (const [key, d] of deltas) {
-    if (d.kind === "token" && d.delta !== 0n) {
-      warnings.push(`token ${key.slice(6, 18)}… net change ${d.delta} (check direction)`);
+  for (const t of tokens) {
+    for (const issue of t.issues) warnings.push(`token ${t.typeHash.slice(0, 12)}…: ${issue}`);
+    if (t.delta > 0n) {
+      warnings.push(
+        `token ${t.typeHash.slice(0, 12)}…: ${t.ownerMode ? "owner-mode mint" : "mint"} of ${t.delta}`,
+      );
+    } else if (t.delta < 0n) {
+      warnings.push(`token ${t.typeHash.slice(0, 12)}…: burns ${-t.delta}`);
     }
   }
   tx.outputs.forEach((o, i) => {
-    if (o.type && !isDaoType(o.type)) {
-      warnings.push(`output ${i}: type script ${classifyType(o.type)} (not fully resolved)`);
+    if (o.type && !isDaoType(o.type) && classifyType(o.type) === "unknown type") {
+      warnings.push(`output ${i}: type script unknown (${o.type.codeHash.slice(0, 18)}…)`);
     }
     if (!o.type && hexToBytes(tx.outputsData[i] ?? "0x").length > 0) {
       warnings.push(`output ${i}: carries data but has no type script`);
@@ -173,6 +177,7 @@ export function inspect(
     dao,
     daoInterest,
     interestKnown,
+    tokens,
   };
 }
 

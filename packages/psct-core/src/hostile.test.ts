@@ -17,6 +17,7 @@ import { witnessLock, decodeWitnessArgs, encodeWitnessArgs } from "./sighash.js"
 import { decodeMultisigLock } from "./multisig.js";
 import { occupiedBytes } from "./capacity.js";
 import { DAO_CODE_HASH, classifyDaoCell } from "./dao.js";
+import { decodeXudtArgs, ownerMode, tokenAmount, tokenKind } from "./xudt.js";
 import { txHash } from "./hash.js";
 import { hexToBytes, bytesToHex } from "./bytes.js";
 import { loadFixture, loadManifest } from "./fixtures.js";
@@ -303,6 +304,42 @@ describe("nervos dao", () => {
     assert.equal(parsed?.kind, "withdrawing");
     // and the inspector must not report a token delta for it
     assert.equal(dao.r.deltas.filter((d) => d.kind === "token").length, 0);
+  });
+});
+
+describe("xudt", () => {
+  const token = (() => {
+    for (const e of manifest) {
+      const f = loadFixture(e.hash);
+      const r = inspect(f.tx, bindAll(f.tx, f.proofs), { headers: f.headers });
+      if (r.tokens.length > 0) return { f, r, t: r.tokens[0]! };
+    }
+    throw new Error("no xUDT fixture");
+  })();
+
+  it("recognises xUDT and totals the amount across cells", () => {
+    assert.equal(token.t.kind, "xudt");
+    assert.ok(token.t.delta > 0n);
+  });
+
+  it("owner mode follows the flags, not just input locks", () => {
+    const bound = bindAll(token.f.tx, token.f.proofs);
+    const xudtCell = bound.find((b) => tokenKind(b.cellOutput.type) === "xudt");
+    assert.ok(xudtCell, "no xUDT input");
+    const info = decodeXudtArgs(xudtCell!.cellOutput.type!.args)!;
+    // What the chain says: owner mode is satisfied.
+    assert.equal(ownerMode(info, token.f.tx, bound), true);
+    // Drop the flag that points at input type scripts: input locks alone do not satisfy it.
+    assert.equal(ownerMode({ ...info, flags: 0 }, token.f.tx, bound), false);
+  });
+
+  it("reads the first 16 bytes and ignores extension data", () => {
+    const data = "0x" + "01".padStart(2, "0") + "00".repeat(15) + "deadbeef";
+    assert.equal(tokenAmount(data), 1n);
+  });
+
+  it("refuses data shorter than 16 bytes", () => {
+    assert.equal(tokenAmount("0x" + "00".repeat(15)), null);
   });
 });
 

@@ -104,7 +104,11 @@ export function sighashMessage(
   parts.push(u64(w0.length), w0);
 
   for (const idx of sorted.slice(1)) {
-    const w = hexToBytes(tx.witnesses[idx] ?? "0x");
+    // The lock scripts load each group witness by index and break on CKB_INDEX_OUT_OF_BOUND.
+    // A transaction with fewer witnesses than inputs therefore stops the message there; it is
+    // not padded with empty witnesses.
+    if (idx >= tx.witnesses.length) break;
+    const w = hexToBytes(tx.witnesses[idx]!);
     parts.push(u64(w.length), w);
   }
   for (let i = tx.inputs.length; i < tx.witnesses.length; i++) {

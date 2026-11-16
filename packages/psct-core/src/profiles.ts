@@ -12,6 +12,7 @@
  */
 
 import type { Script } from "./ckb.js";
+import { tokenKind } from "./xudt.js";
 
 export type LockKind = "signable" | "unknown";
 
@@ -102,6 +103,9 @@ export function classifyLock(script: Script): LockProfile {
 }
 
 export function classifyType(script: Script): string {
+  const kind = tokenKind(script);
+  if (kind === "xudt") return "xUDT";
+  if (kind === "sudt") return "sUDT";
   return TYPE_REGISTRY[key(script.codeHash, script.hashType)] ?? "unknown type";
 }
 

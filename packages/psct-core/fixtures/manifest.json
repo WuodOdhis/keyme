@@ -46,5 +46,11 @@
     "inputs": 1,
     "outputs": 1,
     "fee": "936"
+  },
+  {
+    "hash": "0xb498371de6578f3cc361c64701db7d99eb333d9cd618012136a7303748362789",
+    "inputs": 4,
+    "outputs": 4,
+    "fee": "40410"
   }
 ]
