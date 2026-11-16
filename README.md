@@ -52,7 +52,8 @@ Stages 0–2 complete on devnet and testnet.
   vector and verifies every signer.
 - `ckb-cli` interop: export/import round-trips secp and multisig; lossy exports are refused.
 - Coordinator + offline signer working end-to-end: a devnet secp transfer, a 2-of-3 multisig spend
-  signed by two separate processes, and a testnet transfer committed at block 23,084,406.
+  signed by two separate processes, a testnet transfer committed at block 23,084,406, a testnet
+  2-of-3 payout, a full DAO deposit → prepare → withdraw cycle, and an xUDT mint + transfer.
 - Threat-model walk against D1; it found a gap (unknown type scripts were only warned about) which is
   now refused by the signer.
 - Account pairing: the signer derives its own change from a paired xpub (BIP32) and refuses a
