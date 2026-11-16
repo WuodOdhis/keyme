@@ -7,6 +7,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadFixture, loadManifest } from "../fixtures.js";
+import { bytesToHex } from "../bytes.js";
 import { bindAll } from "../psct/bind.js";
 import { classifyLock } from "../profiles.js";
 import {
@@ -17,7 +18,8 @@ import {
   psctFingerprint,
   psctTxHash,
 } from "../psct/container.js";
-import { txHash } from "../hash.js";
+import { txHash, ckbHash } from "../hash.js";
+import { encodeTransaction } from "../ckb.js";
 
 interface VectorEntry {
   file: string;
@@ -26,6 +28,8 @@ interface VectorEntry {
   inputs: number;
   outputs: number;
   final_tx_hash: string;
+  /** blake2b of the full Transaction (raw + witnesses). Covers the finalized witnesses. */
+  full_tx_hash: string;
   note: string;
 }
 
@@ -68,6 +72,7 @@ function main() {
       inputs: f.tx.inputs.length,
       outputs: f.tx.outputs.length,
       final_tx_hash: txHash(final),
+      full_tx_hash: bytesToHex(ckbHash(encodeTransaction(final))),
       note,
     });
     console.log(`${file}: ${encoded.length} bytes, ${note}`);

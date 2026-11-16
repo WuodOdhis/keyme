@@ -3,6 +3,9 @@
 Version: 1.0 — 2026-11-16
 Audience: whoever writes the Rust (signer-side) implementation in stage 1.
 
+> A Rust reference now exists in `packages/psct-rs` and passes every vector. Read this contract to
+> check the *rules*, then read that crate to see one concrete interpretation.
+
 `psct-core` is TypeScript, but the *rules* are the deliverable. This document lists exactly what a
 second implementation has to match. If two implementations disagree on any line here, the spec is
 wrong, not the code.

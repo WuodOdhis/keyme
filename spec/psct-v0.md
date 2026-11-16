@@ -231,9 +231,14 @@ combine(a, b) -> c
 | `0x4396de69….psct.b64` | 3-of-5 multisig (large: contract-deployment proof) |
 | `0xfdf1c26c….psct.b64` | Nervos DAO withdraw, 2 headers |
 
-`manifest.json` records `tx_hash`, `fingerprint`, input/output counts and `final_tx_hash` for each.
-A second implementation is conformant when it decodes each file, reproduces `tx_hash`, and finalizes
-to `final_tx_hash`.
+`manifest.json` records `tx_hash`, `fingerprint`, input/output counts, `final_tx_hash` and
+`full_tx_hash` for each. `tx_hash` and `final_tx_hash` are the same value because transaction hashes
+exclude witnesses; `full_tx_hash` is `blake2b(molecule(Transaction))` over the **finalized** bytes and
+therefore covers witness assembly, signature order and templates.
+
+A second implementation is conformant when it decodes each file, reproduces `tx_hash`, finalizes to
+`full_tx_hash`, and verifies every signature. `packages/psct-rs` is that implementation; run
+`npm run conformance` from `packages/psct-core` to compare it with this manifest.
 
 ---
 

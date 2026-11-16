@@ -6,6 +6,7 @@
     "inputs": 3,
     "outputs": 3,
     "final_tx_hash": "0xd45dcad94b8015747556cfe0d872f6f5e2f0f5a97c93ab4216302b099342655b",
+    "full_tx_hash": "0xfd0b7f6f050e7ae9cce59fdb478547e4c72119b1dde949b0695e5284bb7a58a0",
     "note": "single-key secp256k1"
   },
   {
@@ -15,6 +16,7 @@
     "inputs": 2,
     "outputs": 2,
     "final_tx_hash": "0x4396de69818bd88b7fce64797ccec25d1294912d56846432f29fd192120992ee",
+    "full_tx_hash": "0xececb37e99fd7c1420122363b4ae9fe8ad35d7fae36efa6665c00c80e952c63a",
     "note": "multisig"
   },
   {
@@ -24,6 +26,7 @@
     "inputs": 1,
     "outputs": 1,
     "final_tx_hash": "0xfdf1c26c9d4eae42e6e53d3ea6ad9490fc01e9d17ed1bcd09c9eef51232bc160",
+    "full_tx_hash": "0x2f8b808af97a39605a8378b6509a9a671e610314523fec27113f41950930f397",
     "note": "nervos dao withdraw"
   }
 ]
