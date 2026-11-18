@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KeyMe — PSCT air-gap demo</title>
+<style>
+  :root{
+    --bg:#0b0f17; --card:#131a26; --border:#243044; --text:#e2e8f0;
+    --muted:#94a3b8; --ckb:#3cc68a; --warn:#f59e0b; --danger:#ef4444; --info:#38bdf8;
+  }
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+  body{margin:0;padding:22px;background:var(--bg);color:var(--text);display:flex;justify-content:center}
+  .container{max-width:1120px;width:100%}
+  header{text-align:center;margin-bottom:16px}
+  header h1{margin:0 0 5px;font-size:1.45rem}
+  header p{margin:0;color:var(--muted);font-size:.92rem}
+  .controls{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-bottom:18px;background:var(--card);padding:11px 14px;border-radius:12px;border:1px solid var(--border)}
+  button{background:#1e293b;color:var(--text);border:1px solid var(--border);padding:7px 13px;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem;transition:.15s}
+  button:hover:not(:disabled){border-color:var(--ckb);color:var(--ckb)}
+  button.primary{background:var(--ckb);color:#052e16;border-color:var(--ckb)}
+  button.primary:hover:not(:disabled){background:#4ade80;color:#052e16}
+  button.danger-active{background:var(--danger);color:#fff;border-color:var(--danger)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .stage{display:grid;grid-template-columns:1fr 190px 1fr;gap:14px;align-items:stretch}
+  @media(max-width:900px){.stage{grid-template-columns:1fr}}
+  .device{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;transition:border-color .3s,box-shadow .3s}
+  .device.active-online{border-color:var(--info);box-shadow:0 0 20px rgba(56,189,248,.12)}
+  .device.active-offline{border-color:var(--ckb);box-shadow:0 0 20px rgba(60,198,138,.14)}
+  .device.tamper-alert{border-color:var(--danger);box-shadow:0 0 24px rgba(239,68,68,.25)}
+  .badge{display:inline-block;font-size:.68rem;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:999px;letter-spacing:.04em}
+  .badge.online{background:rgba(56,189,248,.15);color:var(--info)}
+  .badge.offline{background:rgba(60,198,138,.15);color:var(--ckb)}
+  .device h2{margin:7px 0 0;font-size:1.05rem}
+  .screen{background:#080c12;border:1px solid #1e293b;border-radius:10px;padding:13px;margin:13px 0;min-height:245px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem;line-height:1.45}
+  .screen-title{font-weight:700;margin-bottom:9px;letter-spacing:.02em}
+  .screen-title.good{color:var(--ckb)}
+  .screen-title.bad{color:var(--danger)}
+  .row{display:flex;justify-content:space-between;margin-bottom:6px;gap:10px}
+  .label{color:var(--muted)}
+  .val{text-align:right;word-break:break-all}
+  .val.good{color:var(--ckb);font-weight:700}
+  .val.bad{color:var(--danger);font-weight:700}
+  .note{margin-top:10px;color:var(--muted);font-size:.78rem;line-height:1.45}
+  .note.good{color:var(--ckb)}
+  .note.bad{color:var(--danger)}
+  .foot{font-size:.74rem;color:var(--muted);line-height:1.4}
+  .airgap{display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:8px 0}
+  .airgap-line{position:absolute;top:0;bottom:0;width:2px;background:repeating-linear-gradient(to bottom,var(--border) 0,var(--border) 8px,transparent 8px,transparent 16px)}
+  .qr-box{z-index:2;background:#fff;padding:9px;border-radius:10px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5);transition:opacity .3s,transform .3s}
+  .qr-grid{display:grid;grid-template-columns:repeat(7,12px);grid-template-rows:repeat(7,12px);gap:2px;margin:0 auto}
+  .qr-cell{background:#0f172a;border-radius:1px}
+  .qr-cell.off{background:#e2e8f0}
+  .qr-caption{margin-top:5px;font-size:.68rem;font-weight:700;color:#0f172a;max-width:112px}
+  .airgap-note{margin-top:10px;font-size:.66rem;color:var(--muted);text-align:center;line-height:1.35;z-index:2;background:var(--bg);padding:3px 5px}
+  .narrator{margin-top:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px}
+  .step-pills{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap}
+  .pill{font-size:.72rem;padding:4px 10px;border-radius:999px;background:#1e293b;color:var(--muted)}
+  .pill.active{background:var(--ckb);color:#052e16;font-weight:700}
+  .narrator h3{margin:0 0 5px;font-size:1rem}
+  .narrator p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.5}
+  .demo-footer{max-width:1120px;margin:14px auto 0;color:#64748b;font-size:.72rem;line-height:1.5;text-align:center}
+</style>
+</head>
+<body>
+<main class="container">
+  <header>
+    <h1>CKB PSCT + Air-Gapped Signer</h1>
+    <p>Concept simulation: the coordinator proposes, the offline device verifies, the human checks the address.</p>
+  </header>
+
+  <div class="controls">
+    <button id="prev">← Previous</button>
+    <button id="next" class="primary">Next step →</button>
+    <button id="play">▶ Auto-play</button>
+    <button id="tamper">Malware: swap change: OFF</button>
+    <button id="reset">↺ Reset</button>
+  </div>
+
+  <section class="stage">
+    <article class="device" id="online">
+      <div>
+        <span class="badge online">Watch-only coordinator</span>
+        <h2>Laptop / web app</h2>
+      </div>
+      <div class="screen" id="onlineScreen"></div>
+      <div class="foot">Holds public keys only · cannot sign</div>
+    </article>
+
+    <div class="airgap">
+      <div class="airgap-line"></div>
+      <div class="qr-box" id="qrBox" style="opacity:.2">
+        <div class="qr-grid" id="qrGrid"></div>
+        <div class="qr-caption" id="qrCaption">air gap</div>
+      </div>
+      <div class="airgap-note">no radio<br>no USB data</div>
+    </div>
+
+    <article class="device" id="offline">
+      <div>
+        <span class="badge offline">Air-gapped signer</span>
+        <h2>KeyMe · Pico 2</h2>
+      </div>
+      <div class="screen" id="offlineScreen"></div>
+      <div class="foot">Holds the seed · QR scanner + screen only</div>
+    </article>
+  </section>
+
+  <section class="narrator">
+    <div class="step-pills" id="pills"></div>
+    <h3 id="stepTitle"></h3>
+    <p id="stepDesc"></p>
+  </section>
+  <p class="demo-footer">Illustrative simulation, not the protocol. The QR grid is not a real code; the real verifier is the PSCT test suite. The automatic block shown here is the change-output check. A recipient swap is caught by the human check: the device shows the real destination.</p>
+</main>
+
+<script>
+const STEPS = [
+  {
+    pill: "1. Build",
+    title: "1. The watch-only coordinator builds the PSCT",
+    desc: "The online app selects inputs, attaches the proofs and headers the device needs, sets the recipient, change and fee, and shows the PSCT fingerprint before export."
+  },
+  {
+    pill: "2. Air gap",
+    title: "2. Animated QR frames cross the air gap",
+    desc: "The PSCT is split into multi-frame QR. The device scans the frames and reassembles them. There is no radio and no USB data path."
+  },
+  {
+    pill: "3. Audit",
+    title: "3. The device verifies proofs, scripts and change",
+    desc: "It hashes each proof to the input it claims, checks known locks and types, computes the fee, and verifies that change returns to its own change lock. It also shows the destination for you to check."
+  },
+  {
+    pill: "4. Sign",
+    title: "4. Sign the witness, return the signed PSCT",
+    desc: "After you confirm on the device, it signs the sighash and returns the witness in the signed PSCT. The coordinator finalizes and broadcasts."
+  }
+];
+
+const state = { step: 0, tampered: false, qrFrame: 0 };
+const $ = (id) => document.getElementById(id);
+const qrGrid = $("qrGrid");
+for (let i = 0; i < 49; i++) {
+  const cell = document.createElement("div");
+  cell.className = "qr-cell";
+  qrGrid.appendChild(cell);
+}
+
+const FINDER = new Set([0,1,2,7,8,9,14,15,16,6,13,20,34,41,48,42,43,44,36,37,38,40,47,46]);
+function paintQR(frame) {
+  const cells = qrGrid.children;
+  for (let i = 0; i < cells.length; i++) {
+    const on = FINDER.has(i) ? true : (((i * 5 + frame * 7) % 7) < 3);
+    cells[i].classList.toggle("off", !on);
+  }
+}
+
+const FP_GOOD = "0x3f9a…c41a";
+const FP_TAMPER = "0x9f83…c41a";
+const RECIPIENT = "ckb1q…alice9x2k";
+const CHANGE_GOOD = "ckb1q…you7c3";
+const CHANGE_TAMPER = "ckb1q…h4ck3r";
+
+function setQR(caption, opacity) {
+  $("qrCaption").textContent = caption;
+  $("qrBox").style.opacity = String(opacity);
+}
+
+function render() {
+  const { step, tampered } = state;
+  $("pills").innerHTML = STEPS.map((s, i) =>
+    `<span class="pill${i === step ? " active" : ""}">${s.pill}</span>`
+  ).join("");
+  $("stepTitle").textContent = STEPS[step].title;
+  $("stepDesc").textContent = STEPS[step].desc;
+  $("prev").disabled = step === 0;
+  $("next").disabled = step === 3;
+  $("tamper").textContent = `Malware: swap change: ${tampered ? "ON" : "OFF"}`;
+  $("tamper").classList.toggle("danger-active", tampered);
+
+  const onlineDevice = $("online");
+  const offlineDevice = $("offline");
+  onlineDevice.className = "device";
+  offlineDevice.className = "device";
+
+  const change = tampered ? CHANGE_TAMPER : CHANGE_GOOD;
+  const fp = tampered ? FP_TAMPER : FP_GOOD;
+
+  if (step === 0) {
+    onlineDevice.classList.add("active-online");
+    setQR("air gap", .2);
+    $("onlineScreen").innerHTML = `
+      <div class="screen-title">Building PSCT</div>
+      <div class="row"><span class="label">Input proof</span><span class="val">1,500.000 CKB</span></div>
+      <div class="row"><span class="label">Send to</span><span class="val">${RECIPIENT}</span></div>
+      <div class="row"><span class="label">Amount</span><span class="val">1,000.000 CKB</span></div>
+      <div class="row"><span class="label">Change to</span><span class="val ${tampered ? "bad" : ""}">${change}</span></div>
+      <div class="row"><span class="label">Fee</span><span class="val">0.001 CKB</span></div>
+      <div class="row"><span class="label">PSCT fingerprint</span><span class="val">${FP_GOOD}</span></div>
+      <div class="note">proofs + headers attached · witness empty</div>
+      ${tampered ? '<div class="note bad">Malware swapped the change output after the display.</div>' : ""}
+    `;
+    $("offlineScreen").innerHTML = `
+      <div class="screen-title" style="color:#64748b">IDLE · AIR-GAPPED</div>
+      <div class="note">No radio. No USB data. Waiting to scan the PSCT QR frames.</div>
+    `;
+  }
+
+  if (step === 1) {
+    onlineDevice.classList.add("active-online");
+    offlineDevice.classList.add("active-offline");
+    setQR(`PSCT frame ${state.qrFrame + 1}/4`, 1);
+    $("onlineScreen").innerHTML = `
+      <div class="screen-title">Exporting animated QR</div>
+      <div class="row"><span class="label">Payload</span><span class="val">PSCT ≈ 1.4 KB</span></div>
+      <div class="row"><span class="label">Frame</span><span class="val">${state.qrFrame + 1} / 4</span></div>
+      <div class="row"><span class="label">Radio / USB data</span><span class="val good">DISABLED</span></div>
+      <div class="note">The device scans each frame and reassembles the PSCT.</div>
+      ${tampered ? '<div class="note bad">The bytes now contain a swapped change output; the coordinator still displays the old fingerprint.</div>' : ""}
+    `;
+    $("offlineScreen").innerHTML = `
+      <div class="screen-title good">SCANNING</div>
+      <div class="note">Reading QR frames…<br>Reassembling the PSCT packet…</div>
+      <div class="row" style="margin-top:10px"><span class="label">Frames</span><span class="val">${state.qrFrame + 1}/4</span></div>
+    `;
+  }
+
+  if (step === 2) {
+    onlineDevice.classList.add("active-online");
+    offlineDevice.classList.add(tampered ? "tamper-alert" : "active-offline");
+    setQR("scan complete", .35);
+    $("onlineScreen").innerHTML = `
+      <div class="screen-title">Waiting for the device</div>
+      <div class="row"><span class="label">PSCT fingerprint shown</span><span class="val">${FP_GOOD}</span></div>
+      <div class="row"><span class="label">Change shown</span><span class="val ${tampered ? "bad" : ""}">${change}</span></div>
+      <div class="note">${tampered ? "The display is stale; the bytes changed after it was drawn." : "The device is auditing the bytes it received."}</div>
+    `;
+    if (tampered) {
+      $("offlineScreen").innerHTML = `
+        <div class="screen-title bad">AUDIT FAILED</div>
+        <div class="row"><span class="label">PSCT fingerprint</span><span class="val bad">${FP_TAMPER}</span></div>
+        <div class="row"><span class="label">Coordinator showed</span><span class="val">${FP_GOOD}</span></div>
+        <div class="row"><span class="label">Change to self</span><span class="val bad">${CHANGE_TAMPER} ✗</span></div>
+        <div class="row"><span class="label">Destination</span><span class="val">${RECIPIENT}</span></div>
+        <div class="row"><span class="label">Fee</span><span class="val good">0.001 CKB ✓</span></div>
+        <div class="note bad">BLOCKED: change does not return to my lock.</div>
+      `;
+    } else {
+      $("offlineScreen").innerHTML = `
+        <div class="screen-title good">AUDIT PASSED</div>
+        <div class="row"><span class="label">PSCT fingerprint</span><span class="val good">${FP_GOOD}</span></div>
+        <div class="row"><span class="label">Input proof</span><span class="val">1,500.000 CKB ✓</span></div>
+        <div class="row"><span class="label">Destination</span><span class="val">${RECIPIENT}</span></div>
+        <div class="row"><span class="label">Change to self</span><span class="val good">${CHANGE_GOOD} ✓</span></div>
+        <div class="row"><span class="label">Fee</span><span class="val good">0.001 CKB ✓</span></div>
+        <div class="note good">Known lock/type only. Press the device button to sign the witness.</div>
+      `;
+    }
+  }
+
+  if (step === 3) {
+    if (tampered) {
+      offlineDevice.classList.add("tamper-alert");
+      setQR("signing aborted", .25);
+      $("onlineScreen").innerHTML = `
+        <div class="screen-title bad">NO SIGNATURE</div>
+        <div class="note">The device refused. No witness was returned; the transaction is not broadcast.</div>
+      `;
+      $("offlineScreen").innerHTML = `
+        <div class="screen-title bad">SIGNATURE REFUSED</div>
+        <div class="note">The change output does not return to my lock. The private key never touched the network.</div>
+      `;
+    } else {
+      onlineDevice.classList.add("active-online");
+      offlineDevice.classList.add("active-offline");
+      setQR(`SIG frame ${state.qrFrame + 1}/2`, 1);
+      $("offlineScreen").innerHTML = `
+        <div class="screen-title good">SIGNED</div>
+        <div class="row"><span class="label">WitnessArgs</span><span class="val good">secp256k1 ✓</span></div>
+        <div class="row"><span class="label">PSCT fingerprint</span><span class="val">${FP_GOOD}</span></div>
+        <div class="note">Displaying the signed PSCT as QR frames.</div>
+      `;
+      $("onlineScreen").innerHTML = `
+        <div class="screen-title good">BROADCAST ACCEPTED (SIMULATION)</div>
+        <div class="row"><span class="label">Witness</span><span class="val good">present ✓</span></div>
+        <div class="row"><span class="label">Final status</span><span class="val good">accepted</span></div>
+        <div class="note">The coordinator finalizes and broadcasts. The key stayed air-gapped.</div>
+      `;
+    }
+  }
+  paintQR(state.qrFrame);
+}
+
+let qrTimer = null;
+let autoTimer = null;
+function syncQR() {
+  if (qrTimer) return;
+  qrTimer = setInterval(() => {
+    const max = state.step === 3 ? 2 : 4;
+    state.qrFrame = (state.qrFrame + 1) % max;
+    render();
+  }, 420);
+}
+function stopQR() {
+  if (qrTimer) { clearInterval(qrTimer); qrTimer = null; }
+}
+function go(step) {
+  state.step = step;
+  state.qrFrame = 0;
+  render();
+  stopQR();
+  if (step === 1 || (step === 3 && !state.tampered)) syncQR();
+}
+
+$("prev").onclick = () => { if (state.step > 0) go(state.step - 1); };
+$("next").onclick = () => { if (state.step < 3) go(state.step + 1); };
+$("tamper").onclick = () => {
+  state.tampered = !state.tampered;
+  render();
+  stopQR();
+  if (state.step === 1 || (state.step === 3 && !state.tampered)) syncQR();
+};
+$("reset").onclick = () => {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  $("play").textContent = "▶ Auto-play";
+  state.step = 0; state.tampered = false; state.qrFrame = 0;
+  render(); stopQR();
+};
+$("play").onclick = () => {
+  if (autoTimer) {
+    clearInterval(autoTimer); autoTimer = null;
+    $("play").textContent = "▶ Auto-play";
+  } else {
+    $("play").textContent = "⏸ Pause";
+    autoTimer = setInterval(() => {
+      const next = (state.step + 1) % 4;
+      go(next);
+    }, 2600);
+  }
+};
+
+window.demo = {
+  setState(step, tampered, qrFrame = 0) {
+    state.step = Math.max(0, Math.min(3, Number(step)));
+    state.tampered = Boolean(tampered);
+    state.qrFrame = Number(qrFrame);
+    render();
+  },
+  setQR(frame) { state.qrFrame = Number(frame); render(); },
+  getState() { return { ...state }; }
+};
+
+render();
+</script>
+</body>
+</html>

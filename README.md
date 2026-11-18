@@ -62,6 +62,12 @@ Stages 0–2 complete on devnet and testnet.
 
 The watch-only web UI is a wrapper over the same builder. Stage 3 (QR) is next.
 
+## Grant and demo
+
+- CKB Community Fund proposal: [`docs/07-dis-proposal-v1.md`](docs/07-dis-proposal-v1.md)
+- Interactive PSCT air-gap demo: https://wuododhis.github.io/keyme/demo/ckb-airgap-demo.html
+- Tamper recording: [`demo/ckb-airgap-demo-tamper.gif`](demo/ckb-airgap-demo-tamper.gif)
+
 Not modelled (and refused): OmniLock auth schemes, JoyID, NostrLock, Spore clusters/DIDs.
 
 ```bash
@@ -82,3 +88,7 @@ Exit codes: `0` ok · `1` refused/failed · `2` usage. JSON encodes bigints as d
 - `docs/01-phase0-findings.md` — what was proven, and what broke
 - `docs/02-implementation-plan.md` — frozen scope for stages 0–2
 - `docs/03-portability.md` — the rules a Rust implementation must reproduce
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).
