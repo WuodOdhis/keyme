@@ -92,10 +92,17 @@ The device has no operating system, no shell and no network stack. The firmware 
 
 A short concept animation shows the flow: the coordinator builds the PSCT, the frames cross the air gap, the device audits the input proofs and change lock, and a malware-swapped change output is refused. It is a simulation, not the protocol; the QR grid is illustrative, and the real verifier is the test suite. The automatic refusal is the change-output check; the destination remains a human check.
 
-- Interactive: `https://wuododhis.github.io/keyme/demo/ckb-airgap-demo.html`
-- Normal recording: `demo/ckb-airgap-demo.gif`
-- Tamper recording: `demo/ckb-airgap-demo-tamper.gif`
-- Still: `demo/ckb-airgap-demo-poster.png`
+[![Open the interactive demo](https://wuododhis.github.io/keyme/demo/ckb-airgap-demo-poster.png)](https://wuododhis.github.io/keyme/demo/ckb-airgap-demo.html)
+
+*Click the still to open the interactive demo.*
+
+**Normal flow**
+
+![PSCT air-gap flow](https://wuododhis.github.io/keyme/demo/ckb-airgap-demo.gif)
+
+**Tamper: a swapped change output is refused**
+
+![Tamper refusal](https://wuododhis.github.io/keyme/demo/ckb-airgap-demo-tamper.gif)
 
 ## Hardware
 
@@ -219,9 +226,6 @@ Thank you.
 ## Links
 
 - Pico 2: https://www.raspberrypi.com/products/raspberry-pi-pico-2/
-- Interactive demo: `https://wuododhis.github.io/keyme/demo/ckb-airgap-demo.html`
-- Demo recording (normal): `https://github.com/WuodOdhis/keyme/blob/main/demo/ckb-airgap-demo.gif`
-- Demo recording (tamper): `https://github.com/WuodOdhis/keyme/blob/main/demo/ckb-airgap-demo-tamper.gif`
 - 2022 Open Transaction: https://github.com/nervosnetwork/ckb/discussions/3607
 - Open Transaction RFC (closed unmerged): https://github.com/nervosnetwork/rfcs/pull/406
 - Open Transaction project issue (closed 2024): https://github.com/nervosnetwork/ckb/issues/3608
