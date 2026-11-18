@@ -12,7 +12,7 @@ package is the oracle.
 ```bash
 npm install
 npm run typecheck
-npm test                 # hostile corpus (17 tests) + offline fixture verification
+npm test                 # 42 hostile + 26 container/interop tests + offline fixtures
 npm run selftest         # live: 25 mainnet txs, hash + signature
 npm run redteam          # the input-claim attack demo
 npm run devnet:multisig  # 2-of-3 legacy spend against a local devnet (needs `offckb node`)
