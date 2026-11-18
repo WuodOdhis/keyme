@@ -218,7 +218,9 @@ This grant is not a promise of a company or a retail product. It proves the desi
 
 ## Why me
 
-I am WuodOdhis. The public CKB work below is the base this proposal builds on.
+I am WuodOdhis. I hold a BSc in Electrical Engineering. I am well versed in the hardware side of this build — board-level design, power, displays, scanners and embedded debugging — and my software and blockchain work covers the PSCT verifier, transaction semantics and the signed bytes. Together they give me an end-to-end understanding of the device, from the carrier board and power path to the signature.
+
+The public CKB work below is the base this proposal builds on.
 
 | Work | What it is | Evidence |
 |---|---|---|

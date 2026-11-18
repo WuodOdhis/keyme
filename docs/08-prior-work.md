@@ -1,6 +1,6 @@
 # Prior work — WuodOdhis
 
-Public CKB-ecosystem work. This page lists public repositories and merged pull requests only; private work and non-CKB projects are not listed. Last updated 2026-11-18.
+BSc in Electrical Engineering; software and blockchain builder. Public CKB-ecosystem work. This page lists public repositories and merged pull requests only; private work and non-CKB projects are not listed. Last updated 2026-11-18.
 
 ## KeyMe — PSCT and the offline signer
 
