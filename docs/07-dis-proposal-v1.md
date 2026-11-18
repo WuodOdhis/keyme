@@ -207,9 +207,23 @@ There is no contingency line. If hardware costs more (tax, a part price change),
 
 ## Why me
 
-I wrote the PSCT spec, the verifier, the coordinator, the signer and the tests. The firmware is a port of the same rules against the same vectors. The 2021 draft stopped at the design; this is the implementation.
+I am WuodOdhis. The public CKB work below is the base this proposal builds on.
 
-`WuodOdhis` — `<one-line background>`. GitHub: `https://github.com/WuodOdhis`. Repository: `https://github.com/WuodOdhis/keyme`.
+| Work | What it is | Evidence |
+|---|---|---|
+| KeyMe | PSCT v0, verifier, coordinator, offline signer, Rust conformance; 68 tests; testnet and devnet runs | [repo](https://github.com/WuodOdhis/keyme) |
+| CKBuilders | CKB Dev Log from the CKBuilders program: cell model, xUDT, JoyID, Spore, Rust scripts, weekly reports, capstone | [repo](https://github.com/WuodOdhis/ckbuilders) |
+| Reflections of a CKBuilder | Three merged Nervos Education Hub articles on the cell model, builder semantics and RGB++/Bitcoin interoperability | [Part 1](https://github.com/NervosEducationHub/EducationHubArticles/pull/265), [Parts 2–3](https://github.com/NervosEducationHub/EducationHubArticles/pull/275) |
+| CellScript swap builder | Deterministic CKB transaction builder for CellScript `amm_pool` contracts (local devnet) | [repo](https://github.com/WuodOdhis/cellscript-swap-builder) |
+| Fiber LSP | Prototype receive-first liquidity service on the Fiber Network | [repo](https://github.com/WuodOdhis/fiber_pi) |
+| CKB Agent Lock | Web2-to-Web3 claim flow with a custom RISC-V lock on CKB-VM | [repo](https://github.com/WuodOdhis/agentckblock) |
+| ForecastCKB | CKB pilot for auditable AI benchmark records; commit-reveal and independent verification | [repo](https://github.com/WuodOdhis/forecastckb) |
+
+I wrote the PSCT spec, the verifier, the coordinator, the signer and the tests. The device firmware will be a port of the same rules against the same vectors. The 2021 draft stopped at the design; this is the implementation.
+
+WuodOdhis — CKB builder working on PSCT, offline signing, transaction tooling and Fiber; CKBuilders and Nervos Education Hub contributor. GitHub: https://github.com/WuodOdhis. Repository: https://github.com/WuodOdhis/keyme.
+
+Full public record: [docs/08-prior-work.md](https://github.com/WuodOdhis/keyme/blob/main/docs/08-prior-work.md).
 
 ## Closing
 
@@ -232,6 +246,7 @@ Thank you.
 - 2021 draft: https://talk.nervos.org/t/rfc-draft-ckb-offline-transaction-signing-scheme/5794
 - 2020 Ledger grant: https://talk.nervos.org/t/4349
 - Repository: `https://github.com/WuodOdhis/keyme`
+- Prior work: https://github.com/WuodOdhis/keyme/blob/main/docs/08-prior-work.md
 - PSCT spec: `https://github.com/WuodOdhis/keyme/blob/main/spec/psct-v0.md`
 - Stage 2 record: `https://github.com/WuodOdhis/keyme/blob/main/docs/04-stage2.md`
 - Threat model: `https://github.com/WuodOdhis/keyme/blob/main/docs/05-threat-model.md`
