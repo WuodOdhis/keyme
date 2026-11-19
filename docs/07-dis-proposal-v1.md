@@ -6,7 +6,7 @@ A watch-only app builds a transaction. It hands it to a small device as a QR cod
 
 Bitcoin calls that container a **PSBT** (Partially Signed Bitcoin Transaction). The devices have names you may know: Coldcard, SeedSigner, Specter DIY. They do not share one design. They share one rule: the key lives on a device that cannot reach the network, and the device shows you what you are signing.
 
-CKB has the same need and no open equivalent. CKB transactions are not Bitcoin transactions. They carry cells, lock and type scripts, DAO state, xUDT amounts and multisig. A Bitcoin device cannot read them. In 2020, a grant added a Ledger app for CKB; it is a closed device. There is still no open, radio-less CKB signer that a community can inspect, build and improve.
+CKB has a software offline workflow in Neuron, but no open, radio-less hardware equivalent. CKB transactions are not Bitcoin transactions. They carry cells, lock and type scripts, DAO state, xUDT amounts and multisig. A Bitcoin device cannot read them. In 2020, a grant added a Ledger app for CKB; it is a closed device. There is still no open, radio-less CKB signer that a community can inspect, build and improve.
 
 KeyMe is the CKB version. PSCT is the container, CKB's equivalent of PSBT. KeyMe is the signer, a small, radio-less device that reads the PSCT, checks every byte, shows the transaction, and signs only after you approve. The first hardware is built on a Pico 2: a small board with a screen, a QR scanner, no radio, and no operating system. It is not a clone of a Bitcoin device; it is the shape that fits CKB.
 
@@ -30,7 +30,7 @@ In September 2022, @doitian opened "CKB Open Transaction" to describe a partial 
 
 The discussion cites Bitcoin's PSBT as prior work. The project produced an alpha demo and an RFC; the RFC was closed without merging, and the project closed in 2024. No open hardware signer shipped.
 
-The 2021 draft planned the offline signer. The 2022 project planned the partial transaction format. Both named the hardware wallet. Neither shipped an open device. KeyMe picks up the signing half: PSCT v0 is the signed container, and the Pico 2, the current Pico, is the device.
+The 2021 draft planned the offline signer. The 2022 project planned the partial transaction format. Both named the hardware wallet. Neither shipped an open device. Neuron already supports an offline signing workflow, including offline multisig, but it keeps the key on an offline general-purpose computer. KeyMe is the hardware half: PSCT v0 is the signed container, and the Pico 2, the current Pico, is the device. If Neuron's offline export/import is documented, a PSCT adapter can move the same transaction between the two.
 
 KeyMe keeps the 2021 goal and changes what building it taught us: canonical CBOR instead of a molecule envelope; hash-bound proofs instead of full input transactions; per-script-group signatures; a registry that refuses unknown scripts; finalize-or-throw. We did not carry the draft's Lua signing path. A signer that executes arbitrary scripts is not a signer we can verify. The 2021 draft is the ancestor; PSCT v0 is the working version.
 
@@ -244,6 +244,7 @@ Full public record: [docs/08-prior-work.md](https://github.com/WuodOdhis/keyme/b
 - Open Transaction project issue (closed 2024): https://github.com/nervosnetwork/ckb/issues/3608
 - 2021 draft: https://talk.nervos.org/t/rfc-draft-ckb-offline-transaction-signing-scheme/5794
 - 2020 Ledger grant: https://talk.nervos.org/t/4349
+- Neuron: https://github.com/nervosnetwork/neuron
 - Repository: `https://github.com/WuodOdhis/keyme`
 - Prior work: https://github.com/WuodOdhis/keyme/blob/main/docs/08-prior-work.md
 - PSCT spec: `https://github.com/WuodOdhis/keyme/blob/main/spec/psct-v0.md`
