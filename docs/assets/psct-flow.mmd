@@ -1,0 +1,14 @@
+sequenceDiagram
+  autonumber
+  participant C as Coordinator
+  participant D as KeyMe device
+  participant N as CKB node
+  C->>C: Build PSCT: tx + input proofs + headers
+  C->>D: Unsigned PSCT as QR frames
+  D->>D: Canonical check, bind proofs, registry, fee/DAO/xUDT
+  D->>D: Show to / amount / fee / change / fingerprint
+  D->>D: User confirms with PIN
+  D->>D: Sighash, secp256k1, witness
+  D->>C: Signed PSCT as QR frames
+  C->>C: Combine, finalize
+  C->>N: Broadcast

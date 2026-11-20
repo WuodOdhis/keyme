@@ -1,0 +1,17 @@
+flowchart LR
+  subgraph K[KeyMe v0.1 - no radio]
+    MCU[RP2350 Pico 2]
+    LCD[2.8-inch TFT]
+    SCAN[GM65 QR scanner]
+    SE[ATECC608B]
+    SD[microSD: updates/backup]
+    UI[Buttons]
+    PWR[LiPo + charger]
+  end
+  C[Coordinator] -->|unsigned PSCT QR| SCAN
+  SCAN --> MCU
+  MCU --> LCD
+  MCU <--> SE
+  MCU --> SD
+  UI --> MCU
+  MCU -->|signed PSCT QR| C

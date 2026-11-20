@@ -66,22 +66,7 @@ The testnet transfer is [0xbb10d0b6…1a85](https://explorer.nervos.org/transact
 
 The coordinator proposes; the device verifies.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant C as Coordinator
-  participant D as KeyMe device
-  participant N as CKB node
-  C->>C: Build PSCT: tx + input proofs + headers
-  C->>D: Unsigned PSCT as QR frames
-  D->>D: Canonical check, bind proofs, registry, fee/DAO/xUDT
-  D->>D: Show to / amount / fee / change / fingerprint
-  D->>D: User confirms with PIN
-  D->>D: Sighash, secp256k1, witness
-  D->>C: Signed PSCT as QR frames
-  C->>C: Combine, finalize
-  C->>N: Broadcast
-```
+![PSCT signing flow](https://raw.githubusercontent.com/WuodOdhis/keyme/main/docs/assets/psct-flow.png)
 
 The device trusts only three things: the canonical PSCT bytes, proofs that hash to the inputs they claim, and its own account and script registry. If a lock or type is unknown, it refuses. If the CBOR is non-canonical, it refuses. If the proof, network or header is wrong, it refuses. There is no "proceed anyway" button.
 
@@ -107,25 +92,7 @@ A short concept animation shows the flow: the coordinator builds the PSCT, the f
 
 The units are off-the-shelf modules on a carrier board. No custom injection mold, no custom silicon.
 
-```mermaid
-flowchart LR
-  subgraph K[KeyMe v0.1 - no radio]
-    MCU[RP2350 Pico 2]
-    LCD[2.8-inch TFT]
-    SCAN[GM65 QR scanner]
-    SE[ATECC608B]
-    SD[microSD: updates/backup]
-    UI[Buttons]
-    PWR[LiPo + charger]
-  end
-  C[Coordinator] -->|unsigned PSCT QR| SCAN
-  SCAN --> MCU
-  MCU --> LCD
-  MCU <--> SE
-  MCU --> SD
-  UI --> MCU
-  MCU -->|signed PSCT QR| C
-```
+![KeyMe hardware block](https://raw.githubusercontent.com/WuodOdhis/keyme/main/docs/assets/keyme-hardware.png)
 
 Why these parts:
 
