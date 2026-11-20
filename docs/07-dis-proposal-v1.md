@@ -1,4 +1,4 @@
-# [DIS] KeyMe Ã¢â‚¬â€ CKB's PSBT: Open Air-Gapped Signing and the First DIY Hardware
+# [DIS] KeyMe — CKB's PSBT: Open Air-Gapped Signing and the First DIY Hardware
 
 If you have used a Bitcoin hardware wallet, the flow is familiar.
 
@@ -12,7 +12,7 @@ KeyMe is the CKB version. PSCT is the container, CKB's equivalent of PSBT. KeyMe
 
 ## The one-minute version
 
-PSCT Ã¢â‚¬â€ a Partially Signed CKB Transaction Ã¢â‚¬â€ is a file with three parts: the transaction, a proof for every coin it spends, and the block headers the scripts need. The device checks that each proof hashes to the coin it claims, decodes the previous output, checks the script against its registry, and shows the amount, destination, fee and change. It signs only after you confirm. It never trusts the coordinator's summary, an address label, or a script it does not know.
+PSCT — a Partially Signed CKB Transaction — is a file with three parts: the transaction, a proof for every coin it spends, and the block headers the scripts need. The device checks that each proof hashes to the coin it claims, decodes the previous output, checks the script against its registry, and shows the amount, destination, fee and change. It signs only after you confirm. It never trusts the coordinator's summary, an address label, or a script it does not know.
 
 ## The idea is not new
 
@@ -47,10 +47,10 @@ KeyMe's software is not a paper design. It is the oracle the hardware will be te
 | Coordinator + signer | CLI. Builds, binds, displays, refuses, signs, finalizes. |
 | Second implementation | Rust. Byte-identical `tx_hash` and `full_tx_hash`; 3/3 conformance vectors. |
 | Testnet | Transfer at block 23,084,406. 2-of-3 payout at block 23,086,201. |
-| Devnet | DAO deposit Ã¢â€ â€™ prepare Ã¢â€ â€™ withdraw; xUDT mint Ã¢â€ â€™ transfer. Reproducible with the demo scripts. |
+| Devnet | DAO deposit → prepare → withdraw; xUDT mint → transfer. Reproducible with the demo scripts. |
 | Hardware | Board selected: Pico 2 (RP2350). Build starts with this grant. |
 
-The testnet transfer is [0xbb10d0b6Ã¢â‚¬Â¦1a85](https://explorer.nervos.org/transaction/0xbb10d0b6fb9ad72f6618f29020a1f065e73b4435f5ce24515afcbcb5c50a1a85); the 2-of-3 spend is [0x0ea1b375Ã¢â‚¬Â¦535f](https://explorer.nervos.org/transaction/0x0ea1b3755a6a9610d266a791f2adb0b8c484e6fa1fe203ccfccffedfddbd535f). The DAO and xUDT runs are devnet, not public chain; the scripts are in the repository. In total: 68 tests, plus the Rust conformance run. The repository is `https://github.com/WuodOdhis/keyme`; the spec is `spec/psct-v0.md`.
+The testnet transfer is [0xbb10d0b6…1a85](https://explorer.nervos.org/transaction/0xbb10d0b6fb9ad72f6618f29020a1f065e73b4435f5ce24515afcbcb5c50a1a85); the 2-of-3 spend is [0x0ea1b375…535f](https://explorer.nervos.org/transaction/0x0ea1b3755a6a9610d266a791f2adb0b8c484e6fa1fe203ccfccffedfddbd535f). The DAO and xUDT runs are devnet, not public chain; the scripts are in the repository. In total: 68 tests, plus the Rust conformance run. The repository is `https://github.com/WuodOdhis/keyme`; the spec is `spec/psct-v0.md`.
 
 ## What this grant delivers
 
@@ -138,7 +138,7 @@ One unit is about $100 in parts (v2 should be significantly cheaper once we have
 
 The first payment is released at approval and funds the hardware order. The kickoff report at week 1 is reviewed before the M1 payment.
 
-The minimum viable outcome is one working unit plus open firmware and docs. If something has to give, the cut order is spare unit Ã¢â€ â€™ custom carrier board Ã¢â€ â€™ ATECC. The firmware and docs are never cut.
+The minimum viable outcome is one working unit plus open firmware and docs. If something has to give, the cut order is spare unit → custom carrier board → ATECC. The firmware and docs are never cut.
 
 ## Budget
 
@@ -185,7 +185,7 @@ This grant is not a promise of a company or a retail product. It proves the desi
 
 ## Why me
 
-I am WuodOdhis. I hold a BSc in Electrical Engineering. I am well versed in the hardware side of this build Ã¢â‚¬â€ board-level design, power, displays, scanners and embedded debugging Ã¢â‚¬â€ and my software and blockchain work covers the PSCT verifier, transaction semantics and the signed bytes. Together they give me an end-to-end understanding of the device, from the carrier board and power path to the signature.
+I am WuodOdhis. I hold a BSc in Electrical Engineering. I am well versed in the hardware side of this build — board-level design, power, displays, scanners and embedded debugging — and my software and blockchain work covers the PSCT verifier, transaction semantics and the signed bytes. Together they give me an end-to-end understanding of the device, from the carrier board and power path to the signature.
 
 The public CKB work below is the base this proposal builds on.
 
@@ -193,7 +193,7 @@ The public CKB work below is the base this proposal builds on.
 |---|---|---|
 | KeyMe | PSCT v0, verifier, coordinator, offline signer, Rust conformance; 68 tests; testnet and devnet runs | [repo](https://github.com/WuodOdhis/keyme) |
 | CKBuilders | CKB Dev Log from the CKBuilders program: cell model, xUDT, JoyID, Spore, Rust scripts, weekly reports, capstone | [repo](https://github.com/WuodOdhis/ckbuilders) |
-| Reflections of a CKBuilder | Three merged Nervos Education Hub articles on the cell model, builder semantics and RGB++/Bitcoin interoperability | [Part 1](https://github.com/NervosEducationHub/EducationHubArticles/pull/265), [Parts 2Ã¢â‚¬â€œ3](https://github.com/NervosEducationHub/EducationHubArticles/pull/275) |
+| Reflections of a CKBuilder | Three merged Nervos Education Hub articles on the cell model, builder semantics and RGB++/Bitcoin interoperability | [Part 1](https://github.com/NervosEducationHub/EducationHubArticles/pull/265), [Parts 2–3](https://github.com/NervosEducationHub/EducationHubArticles/pull/275) |
 | CellScript swap builder | Deterministic CKB transaction builder for CellScript `amm_pool` contracts (local devnet) | [repo](https://github.com/WuodOdhis/cellscript-swap-builder) |
 | Fiber LSP | Prototype receive-first liquidity service on the Fiber Network | [repo](https://github.com/WuodOdhis/fiber_pi) |
 | CKB Agent Lock | Web2-to-Web3 claim flow with a custom RISC-V lock on CKB-VM | [repo](https://github.com/WuodOdhis/agentckblock) |
