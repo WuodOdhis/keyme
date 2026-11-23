@@ -144,7 +144,7 @@ The minimum viable outcome is one working unit plus open firmware and docs. If s
 
 | Category | Amount | What it covers |
 |---|---:|---|
-| Development | $7,638 | Firmware, host QR page, carrier board design, tests. About 400 hours over 14 weeks at a community rate. |
+| Development | $7,638 | Firmware, host QR page, carrier board design, tests. About 400 hours over 14 weeks, shared across the two of us at a community rate. |
 | Hardware | $562 | Four units, PCB, case, tools, shipping. The BOM above, at cost. |
 | Documentation | $600 | Build guide, photos, demo video, test report, Chinese translation. |
 | Independent review | $700 | Firmware review by an embedded developer. |
@@ -175,7 +175,7 @@ This grant is not a promise of a company or a retail product. It proves the desi
 | Risk | Mitigation |
 |---|---|
 | The bare-metal firmware is more work than a Linux app | Reuse the existing Rust PSCT code and vectors; v0.1 supports secp, multisig, DAO and xUDT; explicit cut order. |
-| The 3.5-month schedule is tight | The Rust PSCT code and conformance vectors already exist; hardware is ordered at kickoff; the cut order protects the core; progress notes at each milestone. |
+| The 3.5-month schedule is tight | The Rust PSCT code and conformance vectors already exist; xmoshte owns the hardware in parallel; hardware is ordered at kickoff; the cut order protects the core; progress notes at each milestone. |
 | 520KB is tight with the display and QR | 1-bit or partial display refresh; stream QR frames; prove the budget in M0. |
 | The scanner cannot read animated QR reliably | Test in M1; slow frames, high error correction; SD-card fallback. |
 | Seed storage is weaker than a production wallet | ATECC608B plus PIN; documented limits; v0.2 secure element. |
@@ -185,7 +185,19 @@ This grant is not a promise of a company or a retail product. It proves the desi
 
 ## Why me
 
-I am WuodOdhis. I hold a BSc in Electrical Engineering. I am well versed in the hardware side of this build — board-level design, power, displays, scanners and embedded debugging — and my software and blockchain work covers the PSCT verifier, transaction semantics and the signed bytes. Together they give me an end-to-end understanding of the device, from the carrier board and power path to the signature.
+I am WuodOdhis. I lead the software side: the PSCT spec, verifier, coordinator, signer and the firmware application. I hold a BSc in Electrical Engineering, which gives me the vocabulary to work across the hardware/software boundary.
+
+### Hardware lead
+
+I am not doing the hardware half alone. moshte ([@xmoshte](https://github.com/xmoshte)) is the hardware lead and a long-time friend and collaborator. His public hardware portfolio includes:
+
+- [Revolv-47](https://github.com/xmoshte/revolv-47_hw) — Altium design files for a BLDC electronic speed controller with USB-C PD and power electronics.
+- [Chavi-21](https://github.com/xmoshte/chavi-21_hw) — USB-C PD 1S–4S battery charging and power source module.
+- [Nielo](https://github.com/xmoshte/nielo) — Raspberry Pi Compute Module 5 carrier board.
+- [CBC](https://github.com/xmoshte/CBC_hw) — KiCad design files for the Chord Board Controller, with [ZMK firmware](https://github.com/xmoshte/cbc_fw).
+- [Semgdaq](https://github.com/xmoshte/semgdaq_fw) — PCB manufacturing files, firmware and applications for a biosignals board.
+
+He owns the carrier board, power path, enclosure, assembly and bring-up; I own the PSCT verifier, firmware application, host tool and tests. The $7,638 development budget is shared between us; the hardware BOM is separate.
 
 The public CKB work below is the base this proposal builds on.
 
@@ -201,7 +213,8 @@ The public CKB work below is the base this proposal builds on.
 
 I wrote the PSCT spec, the verifier, the coordinator, the signer and the tests. The device firmware will be a port of the same rules against the same vectors. The 2021 draft stopped at the design; this is the implementation.
 
-Full public record: [docs/08-prior-work.md](https://github.com/WuodOdhis/keyme/blob/main/docs/08-prior-work.md).
+Full public record: [docs/08-prior-work.md](https://github.com/WuodOdhis/keyme/blob/main/docs/08-prior-work.md).  
+Team and hardware portfolio: [docs/09-team.md](https://github.com/WuodOdhis/keyme/blob/main/docs/09-team.md).
 
 ## Links
 

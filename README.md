@@ -155,4 +155,4 @@ Security reports go through GitHub's private advisory.
 
 MIT. See [`LICENSE`](LICENSE).
 
-Maintained by [@WuodOdhis](https://github.com/WuodOdhis).
+Maintained by [@WuodOdhis](https://github.com/WuodOdhis) and [@xmoshte](https://github.com/xmoshte).
